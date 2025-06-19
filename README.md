@@ -26,8 +26,9 @@ The script collects general and career-specific stats for each fighter by naviga
 
 ### Additional Data
 
-https://www.kaggle.com/datasets/mdabbert/ultimate-ufc-dataset?resource=download
-https://www.key2stats.com/data-set/view/1551
+https://www.kaggle.com/datasets/mdabbert/ultimate-ufc-dataset?resource=download |
+https://www.key2stats.com/data-set/view/1551 |
+https://www.kaggle.com/datasets/maksbasher/ufc-complete-dataset-all-events-1996-2024/data
 
 ---
 
