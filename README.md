@@ -24,6 +24,11 @@ The script collects general and career-specific stats for each fighter by naviga
   - Takedown Average, Accuracy, Defense
   - Submission Average
 
+### Additional Data-sets
+
+https://www.kaggle.com/datasets/mdabbert/ultimate-ufc-dataset?resource=download
+https://www.key2stats.com/data-set/view/1551
+
 ---
 
 ### 🤖 Machine Learning (XGBoost)
