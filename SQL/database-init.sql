@@ -50,3 +50,4 @@ WHERE
     AND TD_Def != 0
     AND Sub_Avg != 0.00;
 
+SELECT * FROM clean_ufc_fights LIMIT 5000;
