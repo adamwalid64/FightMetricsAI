@@ -2,8 +2,11 @@ import { useState } from 'react';
 import './App.css';
 
 function App() {
+  const [fighterOne, setFighterOne] = useState('');
+  const [fighterTwo, setFighterTwo] = useState('');
   const [inputs, setInputs] = useState('');
   const [prediction, setPrediction] = useState(null);
+  const [nameMessage, setNameMessage] = useState('');
 
   const handleSubmit = async () => {
     try {
@@ -16,6 +19,12 @@ function App() {
       setPrediction(data.prediction);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleNamePrediction = () => {
+    if (fighterOne && fighterTwo) {
+      setNameMessage(`Prediction for ${fighterOne} vs ${fighterTwo} coming soon`);
     }
   };
 
@@ -57,12 +66,35 @@ function App() {
 
         <section className="predict-section" id="predict">
           <h2>Try the Predictor</h2>
+          <div className="predict-cards">
+            <div className="predict-card">
+              <h3>Live Fight Prediction</h3>
+              <input
+                placeholder="Fighter One"
+                value={fighterOne}
+                onChange={(e) => setFighterOne(e.target.value)}
+              />
+              <input
+                placeholder="Fighter Two"
+                value={fighterTwo}
+                onChange={(e) => setFighterTwo(e.target.value)}
+              />
+              <button onClick={handleNamePrediction}>Predict</button>
+              {nameMessage && (
+                <p className="prediction-result">{nameMessage}</p>
+              )}
+            </div>
+            <div className="predict-card">
+              <h3>Analytics</h3>
+              <div className="analytics-placeholder">Charts Coming Soon</div>
+            </div>
+          </div>
           <textarea
             placeholder="[feature1, feature2, ...]"
             value={inputs}
             onChange={(e) => setInputs(e.target.value)}
           />
-          <button onClick={handleSubmit}>Predict</button>
+          <button onClick={handleSubmit}>Predict from Features</button>
           {prediction !== null && (
             <p className="prediction-result">Prediction: {prediction}</p>
           )}
