@@ -22,6 +22,9 @@ def height_str_to_cm(height_str):
 print(height_str_to_cm("6' 3\""))   # ➜ 190
 print(height_str_to_cm("5' 11\""))  # ➜ 180
 
+# fighter1name = ''
+# fighter2name = ''
+
 # enter fighter ids ex: calcdiff(64, 22)
 def getCustomPredict(fighter1, fighter2):
     columns = ['SLpM', 'SApM', 'Str_Acc', 'TD_Acc', 'Str_Def', 'TD_Def', 'Sub_Avg',
@@ -32,6 +35,7 @@ def getCustomPredict(fighter1, fighter2):
 
     f1_height = height_str_to_cm(f1['height'])
     f2_height = height_str_to_cm(f2['height'])
+
 
     def make_input(winner, loser, winner_height, loser_height):
         return pd.DataFrame([{
@@ -110,3 +114,43 @@ def getCustomPredict(fighter1, fighter2):
 # Adesanya id: 18
 # Imavov id: 1313
 # getCustomPredict(18, 1313)
+
+# REAL TIME TEST 9: LIVE --- Moicano vs. Dariush
+# Moicano id: 1943
+# Dariush id: 658
+# getCustomPredict(1943, 658)
+# Prediction: Dariush
+# Win: 10/10 profit
+
+# REAL TIME TEST 10: LIVE --- Topuria vs. Oliveira
+# Oliveira id: 2141
+# Topuria id: 2989
+# getCustomPredict(2141, 2989)
+# Predicted Winner: Fighter 2141 (ID 2141) — Confidence: 0.76
+# Win: 10/34.5 profit
+
+# REAL TIME TEST 11: LIVE --- Talbott vs. Lima
+# Talbott id: 2921
+# Lima id: 1649
+# getCustomPredict(2921, 1649)
+# Prediction: Lima
+# Win: 10/5.10 profit
+
+# REAL TIME TEST 12: LIVE --- Hermansson vs. Rodrigues
+# Hermansson id: 1212
+# Rodrigues id: 2483
+# getCustomPredict(2483, 1212)
+# Prediction: Hermansson
+# Win: 10/16.5
+
+# REAL TIME TEST 12: SUCCESS --- Strickland vs. DDP 2
+# Strickland id: 2891
+# DDP id: 772
+# getCustomPredict(772, 2891)
+
+
+# REAL TIME TEST 12: Miss --- Cejudo vs. Song 2
+# Cejudo id: 494
+# Song id: 2811
+# getCustomPredict(494, 2811)
+# Prediction: DDP
