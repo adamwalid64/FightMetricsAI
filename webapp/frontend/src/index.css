@@ -1,9 +1,9 @@
 :root {
-  /* Updated color scheme */
+  /* Updated color scheme with muted accent */
   --color-primary: #0C120C;
-  --color-secondary: #C20114;
+  --color-secondary: #1e1e1e;
   --color-third: #C7D6D5;
-  --color-accent: var(--color-secondary);
+  --color-accent: #b34345;
 }
 
 body {
