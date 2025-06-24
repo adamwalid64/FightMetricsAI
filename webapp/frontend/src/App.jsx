@@ -18,13 +18,6 @@ function App() {
   return (
     <div className="App">
       <h1>FightMetricsAI</h1>
-      <textarea
-        placeholder="Enter feature array (JSON)"
-        value={inputs}
-        onChange={(e) => setInputs(e.target.value)}
-      />
-      <button onClick={handleSubmit}>Predict</button>
-      {prediction !== null && <div>Prediction: {prediction}</div>}
     </div>
   );
 }
