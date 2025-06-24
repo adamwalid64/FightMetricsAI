@@ -33,30 +33,40 @@ function App() {
       'Ground Control',
     ];
 
-    const levels = 5; // depth of the tree
-    const tree = [];
-    for (let level = 0; level < levels; level++) {
-      const count = Math.pow(2, level);
-      const levelNodes = [];
-      for (let i = 0; i < count; i++) {
-        levelNodes.push({
-          x: (canvas.width / (count + 1)) * (i + 1),
-          y: (canvas.height / (levels + 1)) * (level + 1),
-          value: (50 + Math.random() * 50).toFixed(1),
-          title: titles[Math.floor(Math.random() * titles.length)],
-        });
+    function generateTree() {
+      const levels = 7; // deeper tree for a grand look
+      const tree = [];
+      for (let level = 0; level < levels; level++) {
+        const count = Math.pow(2, level);
+        const levelNodes = [];
+        const baseY = (canvas.height / (levels + 1)) * (level + 1);
+        for (let i = 0; i < count; i++) {
+          levelNodes.push({
+            x:
+              (canvas.width / (count + 1)) * (i + 1) +
+              (Math.random() - 0.5) * (canvas.width / (count + 2)),
+            y:
+              baseY + (Math.random() - 0.5) * (canvas.height / (levels + 2)),
+            value: (50 + Math.random() * 50).toFixed(1),
+            title: titles[Math.floor(Math.random() * titles.length)],
+          });
+        }
+        tree.push(levelNodes);
       }
-      tree.push(levelNodes);
+
+      const edges = [];
+      for (let level = 1; level < levels; level++) {
+        const parentLevel = tree[level - 1];
+        const currentLevel = tree[level];
+        for (let i = 0; i < currentLevel.length; i++) {
+          const parent = parentLevel[Math.floor(Math.random() * parentLevel.length)];
+          edges.push([parent, currentLevel[i]]);
+        }
+      }
+      return { tree, edges, levels };
     }
 
-    const edges = [];
-    for (let level = 1; level < levels; level++) {
-      const parentLevel = tree[level - 1];
-      const currentLevel = tree[level];
-      for (let i = 0; i < currentLevel.length; i++) {
-        edges.push([parentLevel[Math.floor(i / 2)], currentLevel[i]]);
-      }
-    }
+    let { tree, edges } = generateTree();
 
     let offset = 0;
     const speed = 0.5;
@@ -85,7 +95,10 @@ function App() {
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
 
       offset += speed;
-      if (offset > canvas.width) offset = 0;
+      if (offset > canvas.width) {
+        offset = 0;
+        ({ tree, edges } = generateTree());
+      }
 
       drawTree(offset);
       drawTree(offset - canvas.width);
