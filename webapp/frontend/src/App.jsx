@@ -54,6 +54,7 @@ function App() {
             </div>
           </div>
         </section>
+
         <section className="predict-section" id="predict">
           <h2>Try the Predictor</h2>
           <textarea
@@ -66,6 +67,7 @@ function App() {
             <p className="prediction-result">Prediction: {prediction}</p>
           )}
         </section>
+        
       </main>
       <footer id="contact">
         <p>&copy; {new Date().getFullYear()} FightMetricsAI - All rights reserved.</p>
