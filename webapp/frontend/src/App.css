@@ -1,10 +1,73 @@
-.App {
-  font-family: Arial, sans-serif;
+.dashboard header {
+  background-color: var(--color-secondary);
+  color: var(--color-third);
+  padding: 1rem;
+  text-align: center;
+}
+
+.main-layout {
+  display: flex;
+  height: calc(100vh - 68px);
+}
+
+.sidebar {
+  background-color: var(--color-primary);
+  width: 200px;
+  padding: 1rem;
+  border-right: 1px solid var(--color-third);
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  margin-bottom: 1rem;
+  cursor: pointer;
+  color: var(--color-third);
+}
+
+.content {
+  flex: 1;
   padding: 1rem;
 }
 
-textarea {
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-secondary);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.predict-section textarea {
   width: 100%;
   height: 4rem;
+  background-color: var(--color-primary);
+  color: var(--color-third);
+  border: 1px solid var(--color-third);
+  padding: 0.5rem;
   margin-bottom: 1rem;
+}
+
+.predict-section button {
+  background-color: var(--color-secondary);
+  color: var(--color-third);
+  border: none;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.prediction-result {
+  margin-top: 1rem;
+  font-weight: bold;
 }
