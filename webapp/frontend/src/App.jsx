@@ -34,16 +34,23 @@ function App() {
     ];
 
     const levels = 5; // depth of the tree
+    const shapes = ['circle', 'square', 'triangle'];
     const tree = [];
     for (let level = 0; level < levels; level++) {
       const count = Math.pow(2, level);
       const levelNodes = [];
       for (let i = 0; i < count; i++) {
+        const baseY = (canvas.height / (levels + 1)) * (level + 1);
+        const baseX =
+          level === levels - 1
+            ? (canvas.width / count) * (i + 0.5)
+            : (canvas.width / (count + 1)) * (i + 1);
         levelNodes.push({
-          x: (canvas.width / (count + 1)) * (i + 1),
-          y: (canvas.height / (levels + 1)) * (level + 1),
+          x: baseX,
+          y: baseY,
           value: (50 + Math.random() * 50).toFixed(1),
           title: titles[Math.floor(Math.random() * titles.length)],
+          shape: shapes[(level + i) % shapes.length],
         });
       }
       tree.push(levelNodes);
@@ -57,6 +64,13 @@ function App() {
         edges.push([parentLevel[Math.floor(i / 2)], currentLevel[i]]);
       }
     }
+
+    tree.forEach((levelNodes) => {
+      for (let i = 0; i < levelNodes.length; i++) {
+        const next = levelNodes[(i + 1) % levelNodes.length];
+        edges.push([levelNodes[i], next]);
+      }
+    });
 
     let offset = 0;
     const speed = 0.5;
@@ -72,7 +86,16 @@ function App() {
       tree.flat().forEach((node) => {
         const x = node.x + xOffset;
         ctx.beginPath();
-        ctx.arc(x, node.y, 5, 0, Math.PI * 2);
+        if (node.shape === 'square') {
+          ctx.rect(x - 5, node.y - 5, 10, 10);
+        } else if (node.shape === 'triangle') {
+          ctx.moveTo(x, node.y - 6);
+          ctx.lineTo(x - 5, node.y + 5);
+          ctx.lineTo(x + 5, node.y + 5);
+          ctx.closePath();
+        } else {
+          ctx.arc(x, node.y, 5, 0, Math.PI * 2);
+        }
         ctx.fill();
         ctx.stroke();
         ctx.fillText(`${node.title} ${node.value}%`, x + 8, node.y + 3);
@@ -89,6 +112,7 @@ function App() {
 
       drawTree(offset);
       drawTree(offset - canvas.width);
+      drawTree(offset + canvas.width);
 
       animationFrame = requestAnimationFrame(draw);
     }
