@@ -49,7 +49,8 @@ function App() {
 
     const edges = [];
     nodes.forEach((from) => {
-      const connectionCount = 2 + Math.floor(Math.random() * 3); // 2-4 connections
+      // Slightly reduce the number of edges created between nodes
+      const connectionCount = 1 + Math.floor(Math.random() * 3); // 1-3 connections
       for (let i = 0; i < connectionCount; i++) {
         let to = nodes[Math.floor(Math.random() * numNodes)];
         if (to === from) continue;
