@@ -42,8 +42,6 @@ function App() {
         levelNodes.push({
           x: (canvas.width / (count + 1)) * (i + 1),
           y: (canvas.height / (levels + 1)) * (level + 1),
-          dx: (Math.random() - 0.5) * 0.3,
-          dy: (Math.random() - 0.5) * 0.3,
           value: (50 + Math.random() * 50).toFixed(1),
           title: titles[Math.floor(Math.random() * titles.length)],
         });
@@ -60,30 +58,37 @@ function App() {
       }
     }
 
+    let offset = 0;
+    const speed = 0.5;
+
+    function drawTree(xOffset) {
+      edges.forEach(([from, to]) => {
+        ctx.beginPath();
+        ctx.moveTo(from.x + xOffset, from.y);
+        ctx.lineTo(to.x + xOffset, to.y);
+        ctx.stroke();
+      });
+
+      tree.flat().forEach((node) => {
+        const x = node.x + xOffset;
+        ctx.beginPath();
+        ctx.arc(x, node.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillText(`${node.title} ${node.value}%`, x + 8, node.y + 3);
+      });
+    }
+
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.strokeStyle = 'rgba(255,255,255,0.3)';
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
 
-      edges.forEach(([from, to]) => {
-        ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
-        ctx.lineTo(to.x, to.y);
-        ctx.stroke();
-      });
+      offset += speed;
+      if (offset > canvas.width) offset = 0;
 
-      tree.flat().forEach((node) => {
-        node.x += node.dx;
-        node.y += node.dy;
-        if (node.x < 0 || node.x > canvas.width) node.dx *= -1;
-        if (node.y < 0 || node.y > canvas.height) node.dy *= -1;
-
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillText(`${node.title} ${node.value}%`, node.x + 8, node.y + 3);
-      });
+      drawTree(offset);
+      drawTree(offset - canvas.width);
 
       animationFrame = requestAnimationFrame(draw);
     }
