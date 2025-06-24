@@ -22,40 +22,67 @@ function App() {
     window.addEventListener('resize', resize);
     resize();
 
-    const nodes = Array.from({ length: 6 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: 0.5 + Math.random(),
-      value: (50 + Math.random() * 50).toFixed(1),
-    }));
+    const titles = [
+      'Striking Accuracy',
+      'Takedown Defense',
+      'KO Rate',
+      'SLpM',
+      'Reach',
+      'Submission Avg',
+      'Guard Passing',
+      'Ground Control',
+    ];
+
+    const levels = 5; // depth of the tree
+    const tree = [];
+    for (let level = 0; level < levels; level++) {
+      const count = Math.pow(2, level);
+      const levelNodes = [];
+      for (let i = 0; i < count; i++) {
+        levelNodes.push({
+          x: (canvas.width / (count + 1)) * (i + 1),
+          y: (canvas.height / (levels + 1)) * (level + 1),
+          dx: (Math.random() - 0.5) * 0.3,
+          dy: (Math.random() - 0.5) * 0.3,
+          value: (50 + Math.random() * 50).toFixed(1),
+          title: titles[Math.floor(Math.random() * titles.length)],
+        });
+      }
+      tree.push(levelNodes);
+    }
+
+    const edges = [];
+    for (let level = 1; level < levels; level++) {
+      const parentLevel = tree[level - 1];
+      const currentLevel = tree[level];
+      for (let i = 0; i < currentLevel.length; i++) {
+        edges.push([parentLevel[Math.floor(i / 2)], currentLevel[i]]);
+      }
+    }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.strokeStyle = 'rgba(255,255,255,0.3)';
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
 
-      nodes.forEach((node, idx) => {
-        node.x += node.vx;
-        if (node.x > canvas.width + 50) {
-          node.x = -50;
-          node.y = Math.random() * canvas.height;
-          node.vx = 0.5 + Math.random();
-          node.value = (50 + Math.random() * 50).toFixed(1);
-        }
-        if (idx < nodes.length - 1) {
-          ctx.beginPath();
-          ctx.moveTo(node.x, node.y);
-          ctx.lineTo(nodes[idx + 1].x, nodes[idx + 1].y);
-          ctx.stroke();
-        }
+      edges.forEach(([from, to]) => {
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
       });
 
-      nodes.forEach((node) => {
+      tree.flat().forEach((node) => {
+        node.x += node.dx;
+        node.y += node.dy;
+        if (node.x < 0 || node.x > canvas.width) node.dx *= -1;
+        if (node.y < 0 || node.y > canvas.height) node.dy *= -1;
+
         ctx.beginPath();
         ctx.arc(node.x, node.y, 5, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        ctx.fillText(`${node.value}%`, node.x + 8, node.y + 3);
+        ctx.fillText(`${node.title} ${node.value}%`, node.x + 8, node.y + 3);
       });
 
       animationFrame = requestAnimationFrame(draw);
