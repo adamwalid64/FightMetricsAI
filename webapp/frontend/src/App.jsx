@@ -63,11 +63,10 @@ function App() {
             </div>
           </div>
         </section>
-
         <section className="predict-section" id="predict">
           <h2>Try the Predictor</h2>
           <div className="predict-cards">
-            <div className="predict-card">
+            <div className="predict-card left-card">
               <h3>Live Fight Prediction</h3>
               <input
                 placeholder="Fighter One"
@@ -89,17 +88,9 @@ function App() {
               <div className="analytics-placeholder">Charts Coming Soon</div>
             </div>
           </div>
-          <textarea
-            placeholder="[feature1, feature2, ...]"
-            value={inputs}
-            onChange={(e) => setInputs(e.target.value)}
-          />
-          <button onClick={handleSubmit}>Predict from Features</button>
-          {prediction !== null && (
-            <p className="prediction-result">Prediction: {prediction}</p>
-          )}
+
+          
         </section>
-        
       </main>
       <footer id="contact">
         <p>&copy; {new Date().getFullYear()} FightMetricsAI - All rights reserved.</p>
