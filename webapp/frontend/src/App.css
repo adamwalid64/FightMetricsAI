@@ -1,22 +1,27 @@
+/* Dashboard Layout */
+.dashboard {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
 .dashboard header {
-  background-color: var(--color-secondary);
+  background: linear-gradient(135deg, var(--color-secondary), var(--color-accent));
   color: var(--color-third);
-   padding: 1rem;
+  padding: 1rem;
   text-align: center;
- }
- 
+}
 
 .main-layout {
   display: flex;
-  height: calc(100vh - 68px);
+  flex: 1;
 }
 
 .sidebar {
   background-color: var(--color-primary);
-  width: 200px;
-  padding: 1rem;
-  border-right: 1px solid var(--color-third);
+  width: 220px;
+  padding: 1.5rem;
+  border-right: 1px solid var(--color-accent);
 }
 
 .sidebar ul {
@@ -29,11 +34,16 @@
   margin-bottom: 1rem;
   cursor: pointer;
   color: var(--color-third);
+  transition: color 0.3s;
+}
+
+.sidebar li:hover {
+  color: var(--color-accent);
 }
 
 .content {
   flex: 1;
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
 .cards {
@@ -45,31 +55,134 @@
 
 .card {
   background-color: var(--color-primary);
-  border: 1px solid var(--color-secondary);
+  border: 1px solid var(--color-accent);
   border-radius: 8px;
   padding: 1rem;
   text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .predict-section textarea {
-   width: 100%;
-   height: 4rem;
+  width: 100%;
+  height: 4rem;
   background-color: var(--color-primary);
   color: var(--color-third);
-  border: 1px solid var(--color-third);
+  border: none;
   padding: 0.5rem;
-   margin-bottom: 1rem;
- }
+  margin-bottom: 1rem;
+>>>>>>> e722a9c946e92f607c5a4fbed40423bfe509690c
+}
 
 .predict-section button {
+  background-color: var(--color-accent);
+  color: var(--color-primary);
+  border: none;
+  padding: 0.5rem 1.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.predict-section button:hover {
   background-color: var(--color-secondary);
   color: var(--color-third);
-  border: none;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
 }
 
 .prediction-result {
   margin-top: 1rem;
   font-weight: bold;
+  color: var(--color-accent);
+}
+
+/* New Landing Page Layout */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--color-secondary);
+  color: var(--color-third);
+}
+
+.site-header .logo {
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+.site-header ul {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+}
+
+.site-header a {
+  color: var(--color-third);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.site-header a:hover {
+  color: var(--color-accent);
+}
+
+.hero {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, var(--color-secondary), var(--color-primary));
+}
+
+.hero h1 {
+  margin-bottom: 1rem;
+  font-size: 2.5rem;
+}
+
+.cta-button {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-accent);
+  color: var(--color-primary);
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.3s;
+}
+
+.cta-button:hover {
+  background-color: var(--color-secondary);
+  color: var(--color-third);
+}
+
+.features {
+  padding: 3rem 2rem;
+  background-color: var(--color-primary);
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.feature {
+  background-color: var(--color-secondary);
+  padding: 1rem;
+  border-radius: 6px;
+  text-align: center;
+}
+
+footer {
+  text-align: center;
+  padding: 1rem 0;
+  background-color: var(--color-secondary);
+  color: var(--color-third);
+  margin-top: auto;
 }
