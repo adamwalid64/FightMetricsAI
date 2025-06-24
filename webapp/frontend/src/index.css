@@ -1,8 +1,9 @@
 :root {
-  --color-primary: #0d1117;
-  --color-secondary: #1f2937;
-  --color-third: #f3f4f6;
-  --color-accent: #3b82f6;
+  /* Updated color scheme */
+  --color-primary: #0C120C;
+  --color-secondary: #C20114;
+  --color-third: #C7D6D5;
+  --color-accent: var(--color-secondary);
 }
 
 body {
