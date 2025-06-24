@@ -57,3 +57,8 @@ A simple XGBoost classifier is used to predict a fighter's performance category 
 ```bash
 pip install playwright xgboost scikit-learn pandas numpy
 playwright install
+```
+
+## Web Application Setup
+
+See [webapp/README.md](webapp/README.md) for instructions on running the React frontend and Flask backend that serve predictions from the trained model.
