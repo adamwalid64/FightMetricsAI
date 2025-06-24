@@ -50,4 +50,13 @@ WHERE
     AND TD_Def != 0
     AND Sub_Avg != 0.00;
 
-SELECT * FROM clean_ufc_fights LIMIT 5000;
+SELECT * FROM ufc_data.clean_ufc_fights LIMIT 5000;
+
+
+-- ID search for live prediction
+SELECT * FROM ufc_data.clean_ufc_fights
+WHERE name LIKE '%Imavov%';
+
+SELECT * FROM ufc_data.clean_ufc_fights
+WHERE name LIKE '%Adesanya%';
+
