@@ -33,49 +33,34 @@ function App() {
       'Ground Control',
     ];
 
-    const levels = 5; // depth of the tree
     const shapes = ['circle', 'square', 'triangle'];
-    const tree = [];
-    for (let level = 0; level < levels; level++) {
-      const count = Math.pow(2, level);
-      const levelNodes = [];
-      for (let i = 0; i < count; i++) {
-        const baseY = (canvas.height / (levels + 1)) * (level + 1);
-        const baseX =
-          level === levels - 1
-            ? (canvas.width / count) * (i + 0.5)
-            : (canvas.width / (count + 1)) * (i + 1);
-        levelNodes.push({
-          x: baseX,
-          y: baseY,
-          value: (50 + Math.random() * 50).toFixed(1),
-          title: titles[Math.floor(Math.random() * titles.length)],
-          shape: shapes[(level + i) % shapes.length],
-        });
-      }
-      tree.push(levelNodes);
+    const numNodes = 30;
+    const nodes = [];
+
+    for (let i = 0; i < numNodes; i++) {
+      nodes.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        value: (50 + Math.random() * 50).toFixed(1),
+        title: titles[Math.floor(Math.random() * titles.length)],
+        shape: shapes[i % shapes.length],
+      });
     }
 
     const edges = [];
-    for (let level = 1; level < levels; level++) {
-      const parentLevel = tree[level - 1];
-      const currentLevel = tree[level];
-      for (let i = 0; i < currentLevel.length; i++) {
-        edges.push([parentLevel[Math.floor(i / 2)], currentLevel[i]]);
-      }
-    }
-
-    tree.forEach((levelNodes) => {
-      for (let i = 0; i < levelNodes.length; i++) {
-        const next = levelNodes[(i + 1) % levelNodes.length];
-        edges.push([levelNodes[i], next]);
+    nodes.forEach((from) => {
+      const connectionCount = 2 + Math.floor(Math.random() * 3); // 2-4 connections
+      for (let i = 0; i < connectionCount; i++) {
+        let to = nodes[Math.floor(Math.random() * numNodes)];
+        if (to === from) continue;
+        edges.push([from, to]);
       }
     });
 
     let offset = 0;
     const speed = 0.5;
 
-    function drawTree(xOffset) {
+    function drawNetwork(xOffset) {
       edges.forEach(([from, to]) => {
         ctx.beginPath();
         ctx.moveTo(from.x + xOffset, from.y);
@@ -83,7 +68,7 @@ function App() {
         ctx.stroke();
       });
 
-      tree.flat().forEach((node) => {
+      nodes.forEach((node) => {
         const x = node.x + xOffset;
         ctx.beginPath();
         if (node.shape === 'square') {
@@ -110,9 +95,9 @@ function App() {
       offset += speed;
       if (offset > canvas.width) offset = 0;
 
-      drawTree(offset);
-      drawTree(offset - canvas.width);
-      drawTree(offset + canvas.width);
+      drawNetwork(offset);
+      drawNetwork(offset - canvas.width);
+      drawNetwork(offset + canvas.width);
 
       animationFrame = requestAnimationFrame(draw);
     }
