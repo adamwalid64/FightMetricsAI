@@ -20,40 +20,56 @@ function App() {
   };
 
   return (
-    <div className="dashboard">
-      <header>
-        <h1>FightMetricsAI Dashboard</h1>
+    <div className="app">
+      <header className="site-header">
+        <div className="logo">FightMetricsAI</div>
+        <nav>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#predict">Predict</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </nav>
       </header>
-      <div className="main-layout">
-        <aside className="sidebar">
-          <nav>
-            <ul>
-              <li>Overview</li>
-              <li>Predictions</li>
-              <li>Statistics</li>
-            </ul>
-          </nav>
-        </aside>
-        <main className="content">
-          <section className="cards">
-            <div className="card">Statistic 1</div>
-            <div className="card">Statistic 2</div>
-            <div className="card">Statistic 3</div>
-          </section>
-          <section className="predict-section">
-            <h2>Predict Outcome</h2>
-            <textarea
-              placeholder="[feature1, feature2, ...]"
-              value={inputs}
-              onChange={(e) => setInputs(e.target.value)}
-            />
-            <button onClick={handleSubmit}>Predict</button>
-            {prediction !== null && (
-              <p className="prediction-result">Prediction: {prediction}</p>
-            )}
-          </section>
-        </main>
-      </div>
+      <main>
+        <section className="hero">
+          <h1>Unlock Fight Insights</h1>
+          <p>Use AI-driven analytics to analyze UFC stats and predict outcomes.</p>
+          <a className="cta-button" href="#predict">Get Started</a>
+        </section>
+        <section className="features" id="features">
+          <h2>Features</h2>
+          <div className="feature-list">
+            <div className="feature">
+              <h3>Comprehensive Stats</h3>
+              <p>Access detailed fighter statistics scraped from multiple sources.</p>
+            </div>
+            <div className="feature">
+              <h3>Machine Learning</h3>
+              <p>Advanced models help forecast fight results based on data.</p>
+            </div>
+            <div className="feature">
+              <h3>Interactive Dashboard</h3>
+              <p>Visualize metrics and predictions in a clean dashboard.</p>
+            </div>
+          </div>
+        </section>
+        <section className="predict-section" id="predict">
+          <h2>Try the Predictor</h2>
+          <textarea
+            placeholder="[feature1, feature2, ...]"
+            value={inputs}
+            onChange={(e) => setInputs(e.target.value)}
+          />
+          <button onClick={handleSubmit}>Predict</button>
+          {prediction !== null && (
+            <p className="prediction-result">Prediction: {prediction}</p>
+          )}
+        </section>
+      </main>
+      <footer id="contact">
+        <p>&copy; {new Date().getFullYear()} FightMetricsAI - All rights reserved.</p>
+      </footer>
     </div>
   );
 }
