@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
@@ -7,6 +7,67 @@ function App() {
   const [inputs, setInputs] = useState('');
   const [prediction, setPrediction] = useState(null);
   const [nameMessage, setNameMessage] = useState('');
+
+  useEffect(() => {
+    const canvas = document.getElementById('decision-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animationFrame;
+
+    function resize() {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    const nodes = Array.from({ length: 6 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: 0.5 + Math.random(),
+      value: (50 + Math.random() * 50).toFixed(1),
+    }));
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+
+      nodes.forEach((node, idx) => {
+        node.x += node.vx;
+        if (node.x > canvas.width + 50) {
+          node.x = -50;
+          node.y = Math.random() * canvas.height;
+          node.vx = 0.5 + Math.random();
+          node.value = (50 + Math.random() * 50).toFixed(1);
+        }
+        if (idx < nodes.length - 1) {
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(nodes[idx + 1].x, nodes[idx + 1].y);
+          ctx.stroke();
+        }
+      });
+
+      nodes.forEach((node) => {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillText(`${node.value}%`, node.x + 8, node.y + 3);
+      });
+
+      animationFrame = requestAnimationFrame(draw);
+    }
+
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationFrame);
+    };
+  }, []);
 
   const handleSubmit = async () => {
     try {
@@ -31,7 +92,7 @@ function App() {
   return (
     <div className="app">
       <header className="site-header">
-        <div className="logo">FightMetricsAI</div>
+        <div className="logo">FightMetricsAI<span className="logo-icon" /></div>
         <nav>
           <ul>
             <li><a href="#features">Features</a></li>
@@ -42,9 +103,12 @@ function App() {
       </header>
       <main>
         <section className="hero">
-          <h1>Unlock Fight Insights</h1>
-          <p>Use AI-driven analytics to analyze UFC stats and predict outcomes.</p>
-          <a className="cta-button" href="#predict">Get Started</a>
+          <canvas id="decision-canvas" className="decision-canvas"></canvas>
+          <div className="hero-content">
+            <h1>Unlock Fight Insights</h1>
+            <p>Use AI-driven analytics to analyze UFC stats and predict outcomes.</p>
+            <a className="cta-button" href="#predict">Get Started</a>
+          </div>
         </section>
         <section className="features" id="features">
           <h2>Features</h2>
