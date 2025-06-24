@@ -1,17 +1,11 @@
-<<<<<<< HEAD
-.App {
 
-}
-
-textarea {
-
-=======
 .dashboard header {
   background-color: var(--color-secondary);
   color: var(--color-third);
-  padding: 1rem;
+   padding: 1rem;
   text-align: center;
-}
+ }
+ 
 
 .main-layout {
   display: flex;
@@ -58,15 +52,14 @@ textarea {
 }
 
 .predict-section textarea {
-  width: 100%;
-  height: 4rem;
+   width: 100%;
+   height: 4rem;
   background-color: var(--color-primary);
   color: var(--color-third);
   border: 1px solid var(--color-third);
   padding: 0.5rem;
-  margin-bottom: 1rem;
->>>>>>> e722a9c946e92f607c5a4fbed40423bfe509690c
-}
+   margin-bottom: 1rem;
+ }
 
 .predict-section button {
   background-color: var(--color-secondary);

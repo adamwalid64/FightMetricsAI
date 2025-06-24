@@ -55,8 +55,8 @@ SELECT * FROM ufc_data.clean_ufc_fights LIMIT 5000;
 
 -- ID search for live prediction
 SELECT * FROM ufc_data.clean_ufc_fights
-WHERE name LIKE '%Imavov%';
+WHERE name LIKE '%Pereira%';
 
 SELECT * FROM ufc_data.clean_ufc_fights
-WHERE name LIKE '%Adesanya%';
+WHERE name LIKE '%Ankalaev%';
 
