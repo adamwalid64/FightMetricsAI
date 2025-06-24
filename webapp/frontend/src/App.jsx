@@ -68,20 +68,37 @@ function App() {
           <div className="predict-cards">
             <div className="predict-card left-card">
               <h3>Live Fight Prediction</h3>
-              <input
-                placeholder="Fighter One"
-                value={fighterOne}
-                onChange={(e) => setFighterOne(e.target.value)}
-              />
-              <input
-                placeholder="Fighter Two"
-                value={fighterTwo}
-                onChange={(e) => setFighterTwo(e.target.value)}
-              />
+              <div className="fighter-selection">
+                <div className="fighter-input">
+                  <div className="fighter-image"></div>
+                  <input
+                    list="fighter-options"
+                    placeholder="Fighter One"
+                    value={fighterOne}
+                    onChange={(e) => setFighterOne(e.target.value)}
+                  />
+                </div>
+                <span className="vs">vs</span>
+                <div className="fighter-input">
+                  <div className="fighter-image"></div>
+                  <input
+                    list="fighter-options"
+                    placeholder="Fighter Two"
+                    value={fighterTwo}
+                    onChange={(e) => setFighterTwo(e.target.value)}
+                  />
+                </div>
+              </div>
               <button onClick={handleNamePrediction}>Predict</button>
               {nameMessage && (
                 <p className="prediction-result">{nameMessage}</p>
               )}
+              <datalist id="fighter-options">
+                <option value="Conor McGregor" />
+                <option value="Khabib Nurmagomedov" />
+                <option value="Jon Jones" />
+                <option value="Israel Adesanya" />
+              </datalist>
             </div>
             <div className="predict-card">
               <h3>Analytics</h3>
