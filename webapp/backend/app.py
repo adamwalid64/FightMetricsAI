@@ -14,17 +14,20 @@ model = joblib.load(MODEL_PATH)
 def predict():
     data = request.get_json(force=True)
 
-    features = data.get('features')
     fighter_one = data.get('fighterOne')
     fighter_two = data.get('fighterTwo')
+    features = data.get('features')
 
     print('Fighter One:', fighter_one)
     print('Fighter Two:', fighter_two)
     print('Features:', features)
 
-    features = np.array(data.get('features')).reshape(1, -1)
-    pred = model.predict(features)[0]
-    return jsonify({'prediction': pred})
+    if features:
+        features = np.array(features).reshape(1, -1)
+        pred = model.predict(features)[0]
+        return jsonify({'prediction': pred})
+
+    return jsonify({'message': 'Names received'})
 
 if __name__ == '__main__':
     app.run(debug=True)
