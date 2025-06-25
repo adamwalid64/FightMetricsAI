@@ -6,14 +6,15 @@ import os
 import pandas as pd
 
 # Read in csv file
-df = pd.read_csv('scraped-ufc-data.csv')
+DATA_PATH = os.path.join(os.path.dirname(__file__), 'scraped-ufc-data.csv')
+df = pd.read_csv(DATA_PATH, sep=';')
 
 def get_fighter_id(name, df):
+    """Return fighter ID from dataframe using case-insensitive match."""
     match = df[df['name'].str.lower() == name.lower()]
     if not match.empty:
-        return match.iloc[0]['fighter_id']
-    else:
-        return None
+        return int(match.iloc[0]['id'])
+    return None
 
 app = Flask(__name__)
 CORS(app)
