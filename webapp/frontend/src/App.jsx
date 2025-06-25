@@ -36,11 +36,22 @@ function App() {
     const shapes = ['circle', 'square', 'triangle'];
     const numNodes = 30;
     const nodes = [];
+    const minDistance = 60; // keep nodes spaced so labels don't overlap
 
     for (let i = 0; i < numNodes; i++) {
+      let x, y, attempts = 0;
+      do {
+        x = Math.random() * canvas.width;
+        y = Math.random() * canvas.height;
+        attempts++;
+      } while (
+        attempts < 100 &&
+        nodes.some((n) => Math.hypot(n.x - x, n.y - y) < minDistance)
+      );
+
       nodes.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
+        x,
+        y,
         value: (50 + Math.random() * 50).toFixed(1),
         title: titles[Math.floor(Math.random() * titles.length)],
         shape: shapes[i % shapes.length],
