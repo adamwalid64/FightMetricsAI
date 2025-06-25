@@ -127,7 +127,10 @@ function App() {
       const res = await fetch('http://localhost:5000/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ features: JSON.parse(inputs) })
+        body: JSON.stringify({
+          fighterOne,
+          fighterTwo
+        })
       });
       const data = await res.json();
       setPrediction(data.prediction);
@@ -136,11 +139,6 @@ function App() {
     }
   };
 
-  const handleNamePrediction = () => {
-    if (fighterOne && fighterTwo) {
-      setNameMessage(`Prediction for ${fighterOne} vs ${fighterTwo} coming soon`);
-    }
-  };
 
   return (
     <div className="app">
@@ -206,7 +204,7 @@ function App() {
                   />
                 </div>
               </div>
-              <button onClick={handleNamePrediction}>Predict</button>
+              <button onClick={handleSubmit}>Predict</button>
               {nameMessage && (
                 <p className="prediction-result">{nameMessage}</p>
               )}
