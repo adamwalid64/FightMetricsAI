@@ -4,9 +4,9 @@ import './App.css';
 function App() {
   const [fighterOne, setFighterOne] = useState('');
   const [fighterTwo, setFighterTwo] = useState('');
-  const [inputs, setInputs] = useState('');
   const [prediction, setPrediction] = useState(null);
-  const [nameMessage, setNameMessage] = useState('');
+  const [confidence, setConfidence] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
     const canvas = document.getElementById('decision-canvas');
@@ -134,6 +134,8 @@ function App() {
       });
       const data = await res.json();
       setPrediction(data.prediction);
+      setConfidence(data.confidence);
+      setShowPopup(true);
     } catch (err) {
       console.error(err);
     }
@@ -205,9 +207,6 @@ function App() {
                 </div>
               </div>
               <button onClick={handleSubmit}>Predict</button>
-              {nameMessage && (
-                <p className="prediction-result">{nameMessage}</p>
-              )}
               <datalist id="fighter-options">
                 <option value="Shamil Abdurakhimov" />
                 <option value="Papy Abedi" />
@@ -1544,6 +1543,19 @@ function App() {
       <footer id="contact">
         <p>&copy; {new Date().getFullYear()} FightMetricsAI - All rights reserved.</p>
       </footer>
+      {showPopup && (
+        <div className="popup-overlay" onClick={() => setShowPopup(false)}>
+          <div className="popup" onClick={(e) => e.stopPropagation()}>
+            <h3>Prediction Result</h3>
+            {prediction && (
+              <p>
+                {prediction} - Confidence: {confidence !== null ? (confidence * 100).toFixed(2) : ''}%
+              </p>
+            )}
+            <button onClick={() => setShowPopup(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
