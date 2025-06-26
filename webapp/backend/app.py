@@ -58,5 +58,14 @@ def predict():
 
     return jsonify({'prediction': winner_name, 'confidence': confidence})
 
+
+@app.route('/feature-importance', methods=['GET'])
+def feature_importance():
+    booster = model.get_booster()
+    importance = booster.get_score(importance_type='gain')
+    sorted_items = sorted(importance.items(), key=lambda x: x[1], reverse=True)
+    features, scores = zip(*sorted_items)
+    return jsonify({'features': list(features), 'scores': list(scores)})
+
 if __name__ == '__main__':
     app.run(debug=True)
