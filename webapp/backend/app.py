@@ -43,11 +43,15 @@ def predict():
     print('Fighter One ID:', fighter_one_id)
     print('Fighter Two ID:', fighter_two_id)
 
-    winner = getCustomPredict(fighter_one_id, fighter_two_id)
-    print('Winner: ' + winner)
+    winner_id, confidence = getCustomPredict(fighter_one_id, fighter_two_id)
 
+    if winner_id is None:
+        return jsonify({'error': 'Unable to determine winner'}), 400
 
-    return jsonify({'message': 'Names received'})
+    winner_row = df[df['id'] == winner_id]
+    winner_name = winner_row['name'].iloc[0] if not winner_row.empty else str(winner_id)
+
+    return jsonify({'prediction': winner_name, 'confidence': confidence})
 
 if __name__ == '__main__':
     app.run(debug=True)
