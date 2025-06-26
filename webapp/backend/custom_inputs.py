@@ -1,12 +1,14 @@
 import joblib
+import os
 import pandas as pd
 
-# Load the model
-model = joblib.load("xgb_ufc_model.pkl")
+# Load the model located in the same directory as this file
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "xgb_ufc_model.pkl")
+model = joblib.load(MODEL_PATH)
 
-# Read in up-to-date dataset
-df = pd.read_csv("../Data/scraped-ufc-data.csv", sep=';')
-print(df.columns)
+# Read in up-to-date dataset that ships with the backend
+DATA_PATH = os.path.join(os.path.dirname(__file__), "scraped-ufc-data.csv")
+df = pd.read_csv(DATA_PATH, sep=';')
 
 # helper function to clean data to match ML dataset
 def height_str_to_cm(height_str):
@@ -17,13 +19,6 @@ def height_str_to_cm(height_str):
         return int(feet * 30.48 + inches * 2.54)
     except:
         return None  # or 0, or raise an error
-
-# Example usage
-print(height_str_to_cm("6' 3\""))   # ➜ 190
-print(height_str_to_cm("5' 11\""))  # ➜ 180
-
-# fighter1name = ''
-# fighter2name = ''
 
 # enter fighter ids ex: calcdiff(64, 22)
 def getCustomPredict(fighter1, fighter2):
@@ -63,11 +58,15 @@ def getCustomPredict(fighter1, fighter2):
     p1 = model.predict_proba(X1)[0][1]  # prob f1 wins
     p2 = model.predict_proba(X2)[0][1]  # prob f2 wins (if f2 was first)
 
-    # Choose the higher confidence direction
+    # Choose the higher confidence direction and return the winner id and probability
     if p1 >= p2:
-        print(f"Predicted Winner: Fighter {fighter1} (ID {fighter1}) — Confidence: {p1:.2f}")
+        winner_id = fighter1
+        confidence = float(p1)
     else:
-        print(f"Predicted Winner: Fighter {fighter2} (ID {fighter2}) — Confidence: {p2:.2f}")
+        winner_id = fighter2
+        confidence = float(p2)
+
+    return winner_id, confidence
 
 
 
