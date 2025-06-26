@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import logoPlaceholder from '../img/logo-placeholder.svg';
+import logo from '../img/robologo.png';
+import bluefighter from '../img/bluerobo.png'
+import redfighter from '../img/redrobo.png'
 
 function App() {
   const [fighterOne, setFighterOne] = useState('');
@@ -147,7 +149,7 @@ function App() {
     <div className="app">
       <header className="site-header">
         <div className="logo">
-          <img src={logoPlaceholder} alt="Logo" className="logo-icon" />
+          <img src={logo} alt="Logo" className="logo-icon" />
           FightMetricsAI
         </div>
         <nav>
@@ -191,7 +193,9 @@ function App() {
               <h3>Live Fight Prediction</h3>
               <div className="fighter-selection">
                 <div className="fighter-input">
-                  <div className="fighter-image"></div>
+                  <div className="fighter-image">
+                    <img src={redfighter} alt="blue robo fighter" className="robofighter-image" />
+                  </div>
                   <input
                     list="fighter-options"
                     placeholder="Fighter One"
@@ -201,7 +205,9 @@ function App() {
                 </div>
                 <span className="vs">vs</span>
                 <div className="fighter-input">
-                  <div className="fighter-image"></div>
+                  <div className="fighter-image">
+                    <img src={bluefighter} alt="red robo fighter" className="robofighter-image" />
+                  </div>
                   <input
                     list="fighter-options"
                     placeholder="Fighter Two"
