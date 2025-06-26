@@ -51,6 +51,11 @@ def predict():
     winner_row = df[df['id'] == winner_id]
     winner_name = winner_row['name'].iloc[0] if not winner_row.empty else str(winner_id)
 
+    print('Winner ID: ' + str(winner_id))
+    print('Winner Name: ' + str(winner_name))
+    print('Confidence: ' + str(confidence))
+
+
     return jsonify({'prediction': winner_name, 'confidence': confidence})
 
 if __name__ == '__main__':
