@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import logoPlaceholder from '../img/logo-placeholder.svg';
 
 function App() {
   const [fighterOne, setFighterOne] = useState('');
@@ -145,7 +146,10 @@ function App() {
   return (
     <div className="app">
       <header className="site-header">
-        <div className="logo">FightMetricsAI<span className="logo-icon" /></div>
+        <div className="logo">
+          <img src={logoPlaceholder} alt="Logo" className="logo-icon" />
+          FightMetricsAI
+        </div>
         <nav>
           <ul>
             <li><a href="#features">Features</a></li>
