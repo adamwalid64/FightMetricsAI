@@ -1543,7 +1543,11 @@ function App() {
             </div>
             <div className="predict-card">
               <h3>Analytics</h3>
-              <div className="analytics-placeholder">Charts Coming Soon</div>
+              <div className="analytics-container">
+                
+
+
+              </div>
             </div>
           </div>
 
