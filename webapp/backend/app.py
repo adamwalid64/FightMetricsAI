@@ -5,12 +5,16 @@ import numpy as np
 import os
 import pandas as pd
 
+# Import custom prediction function
+import custom_inputs
+from custom_inputs import getCustomPredict
+
 # Read in csv file
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'scraped-ufc-data.csv')
 df = pd.read_csv(DATA_PATH, sep=';')
 
 def get_fighter_id(name, df):
-    """Return fighter ID from dataframe using case-insensitive match."""
+    # Return fighter ID from dataframe using case-insensitive match
     match = df[df['name'].str.lower() == name.lower()]
     if not match.empty:
         return int(match.iloc[0]['id'])
@@ -38,6 +42,10 @@ def predict():
 
     print('Fighter One ID:', fighter_one_id)
     print('Fighter Two ID:', fighter_two_id)
+
+    winner = getCustomPredict(fighter_one_id, fighter_two_id)
+    print('Winner: ' + winner)
+
 
     return jsonify({'message': 'Names received'})
 
