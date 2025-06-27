@@ -3,6 +3,7 @@ import './App.css';
 import logo from '../img/robologo.png';
 import bluefighter from '../img/bluerobo.png'
 import redfighter from '../img/redrobo.png'
+import FeatureImportanceChart from './FeatureImportanceChart';
 
 function App() {
   const [fighterOne, setFighterOne] = useState('');
@@ -1543,11 +1544,7 @@ function App() {
             </div>
             <div className="predict-card">
               <h3>Analytics</h3>
-              <div className="analytics-container">
-                
-
-
-              </div>
+              <FeatureImportanceChart />
             </div>
           </div>
 
