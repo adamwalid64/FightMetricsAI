@@ -152,6 +152,12 @@
   margin-bottom: 0.5rem;
 }
 
+.robofighter-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .vs {
   margin: 0 0.5rem;
   font-weight: bold;
