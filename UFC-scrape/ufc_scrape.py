@@ -3,6 +3,7 @@ from urllib.parse import urljoin
 import re
 import traceback
 from datetime import datetime
+from dateutil.parser import parse as parse_date
 import mysql.connector
 
 def sanitize(value, convert_func=None):
@@ -91,11 +92,13 @@ def scrape_ufc_events():
                                             dob_str = item.inner_text().replace(label_el.inner_text(), "").strip()
                                             DOB = sanitize(dob_str)
                                             if DOB:
+                                                # remove any parentheses like "(Age 31)" and parse the remaining text
+                                                DOB_clean = re.sub(r"\(.*?\)", "", DOB).strip()
                                                 try:
-                                                    dob_date = datetime.strptime(DOB, "%b %d, %Y").date()
+                                                    dob_date = parse_date(DOB_clean, fuzzy=True).date()
                                                     today = datetime.today().date()
                                                     Age = today.year - dob_date.year - ((today.month, today.day) < (dob_date.month, dob_date.day))
-                                                except:
+                                                except Exception:
                                                     pass
 
                                 if len(info_blocks) >= 2:
