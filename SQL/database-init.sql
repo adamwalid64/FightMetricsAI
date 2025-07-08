@@ -41,14 +41,16 @@ SELECT *
 FROM ufc_data.ufc_fighters
 WHERE 
     age IS NOT NULL
-    AND SLpM != 0.00
-    AND Str_Acc != 0
-    AND SApM != 0.00
-    AND Str_Def != 0
-    AND TD_Avg != 0.00
-    AND TD_Acc != 0
-    AND TD_Def != 0
-    AND Sub_Avg != 0.00;
+        AND NOT (
+        SLpM = 0.00 AND
+        Str_Acc = 0 AND
+        SApM = 0.00 AND
+        Str_Def = 0 AND
+        TD_Avg = 0.00 AND
+        TD_Acc = 0 AND
+        TD_Def = 0 AND
+        Sub_Avg = 0.00
+    );
 
 SELECT * FROM ufc_data.clean_ufc_fights LIMIT 5000;
 
