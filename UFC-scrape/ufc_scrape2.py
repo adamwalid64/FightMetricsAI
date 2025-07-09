@@ -182,13 +182,33 @@ def parse_recent_fights(profile_page):
             except Exception:
                 traceback.print_exc()
 
+            # --- scrape fight details for ranking and title info ---
+            opponent_rank = None
+            opponent_is_champ = False
+            try:
+                fight_link_el = cells[1].query_selector("a")
+                fight_link = fight_link_el.get_attribute("href") if fight_link_el else None
+                if fight_link:
+                    fight_page = profile_page.context.new_page()
+                    fight_page.goto(fight_link, timeout=10000)
+                    fight_page.wait_for_selector("body", timeout=5000)
+                    body_text = fight_page.inner_text("body").lower()
+                    if "title fight" in body_text or "championship" in body_text:
+                        opponent_is_champ = True
+                    rank_match = re.search(r"rank[^\d]*(\d+)", body_text)
+                    if rank_match:
+                        opponent_rank = int(rank_match.group(1))
+                    fight_page.close()
+            except Exception:
+                traceback.print_exc()
+
             fights.append(
                 {
                     "result": result_text,
                     "method": method,
                     "opponent": opponent_name,
-                    "opponent_rank": None,
-                    "opponent_is_champ": False,
+                    "opponent_rank": opponent_rank,
+                    "opponent_is_champ": opponent_is_champ,
                     "all_rounds_judges": all_rounds,
                     "location_country": location_country,
                     "date": fight_date,
