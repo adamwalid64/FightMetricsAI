@@ -30,10 +30,28 @@ WIN_MAP = {
 
 
 def sanitize(value, convert_func=None):
-    """Convert '--' placeholders and optionally apply ``convert_func``."""
-    if value == "--" or value == "" or value is None:
+    """Convert placeholders and safely apply ``convert_func``.
+
+    ``ufcstats`` occasionally embeds odd whitespace or multiple values in the
+    table cells (for example ``'0\n\n1'`` for the round).  This helper makes a
+    best effort to clean such artefacts before conversion so that callers do not
+    have to wrap every numeric field in ``try/except`` blocks.
+    """
+
+    if value in {"--", "", None}:
         return None
-    return convert_func(value) if convert_func else value
+
+    if convert_func is int:
+        # Remove everything except the first integer that appears in the string.
+        m = re.search(r"-?\d+", value.replace("\n", " "))
+        if not m:
+            return None
+        value = m.group()
+
+    try:
+        return convert_func(value) if convert_func else value
+    except (ValueError, TypeError):
+        return None
 
 
 def is_finish(method: str) -> bool:
