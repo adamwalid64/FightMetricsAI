@@ -111,9 +111,21 @@ def _base_score(last_fights: pd.DataFrame) -> int:
 
     # Bonus rules
     if not last_fights.empty:
-        age = last_fights.iloc[0].get("fighter_age")
+        first_row = last_fights.iloc[0]
+        age = first_row.get("fighter_age")
         if pd.notna(age) and age > 35:
             score -= 5 + int(age - 35)
+
+        total_losses = first_row.get("fighter_total_losses")
+        if pd.notna(total_losses) and int(total_losses) == 0:
+            score += 5
+
+        fighter_country = first_row.get("fighter_country")
+        if pd.notna(fighter_country) and fighter_country not in {"USA", "United States"}:
+            fight_country_col = "fight_country" if "fight_country" in last_fights.columns else "location_country"
+            if fight_country_col in last_fights.columns:
+                if any(pd.notna(row.get(fight_country_col)) and row.get(fight_country_col) == fighter_country for _, row in last_fights.iterrows()):
+                    score += 5
 
     if last_fights.shape[0] and (last_fights["result"] != "Loss").all():
         score += 3
@@ -169,6 +181,13 @@ def mathmodel(df: pd.DataFrame, fighter_id: int, opponent_id: Optional[int] = No
         score += _relative_victory_score(df, fighter_id, opponent_id, last_n)
 
     return score
+
+
+def adjusted_scores(df: pd.DataFrame, fighter_a: int, fighter_b: int, last_n: int = 5) -> tuple[int, int]:
+    """Return math model scores for both fighters including relative bonuses."""
+    score_a = mathmodel(df, fighter_a, opponent_id=fighter_b, last_n=last_n)
+    score_b = mathmodel(df, fighter_b, opponent_id=fighter_a, last_n=last_n)
+    return score_a, score_b
 
 
 
