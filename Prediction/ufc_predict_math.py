@@ -191,3 +191,29 @@ def adjusted_scores(df: pd.DataFrame, fighter_a: int, fighter_b: int, last_n: in
 
 
 
+
+
+#   Examine each fighters last 5 fights, #   - Winning:
+    #   1. beating champion: +16 pts
+    #   2. beating rank 1: +15 pts
+    #   3. beating rank 2: +14 pts
+    #   ...
+    #   16. beating rank 15: +1 pt, #   - Methods of winning:
+winMap = {
+    #   1. Finishing an opponent: +5 pts
+    "finish" : 5,
+    #   2. Finish streak: +1 pt for every finish in the streak
+    "finishStreak1x" : 1,
+    #   3. More than 2 judges give you every round: +5 pts
+    "2judgesWin" : 5
+} #   - Relative Victories:
+    #   1. beat someone who beat opponent: +5 pts / 1 pt if loss was avenged by other fighter
+        # - +5 additional pts if finish, +1 for each ina  finish streak #   - Losing:
+    #   1. decision loss: -2 pts
+    #   2. getting finished: -3 pts
+
+#   - Bonus Categories:
+    #   1. Age > 35: -5 pts, -1 extra for each year after
+    #   2. Undefeated in UFC: +5pts
+    #   3. Undefeated in last 5: +3pts
+    #   4. Fighting in country of origin (Excluding US): +5pts
