@@ -59,6 +59,14 @@ pip install playwright xgboost scikit-learn pandas numpy
 playwright install
 ```
 
+
+### MMA Math Model
+
+The project includes a Python implementation of the "MMA Math" algorithm.
+Call `prediction.ufc_predict_math.mathmodel(df, fighter_id, opponent_id=None)`
+to score a fighter using only their last five fights. Passing an `opponent_id`
+adds relative-victory bonuses that compare both fighters' recent opponents.
+
 ## Web Application Setup
 
 See [webapp/README.md](webapp/README.md) for instructions on running the React frontend and Flask backend that serve predictions from the trained model.
