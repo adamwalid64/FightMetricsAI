@@ -44,7 +44,7 @@ def is_finish(method: str) -> bool:
     return not ("decision" in m)
 
 
-def compute_mma_score(fights, age, total_losses):
+def compute_mma_score(fights, age, total_losses, country=None):
     """Compute a fighter rating following the custom rules.
 
     Only a subset of the model rules can be derived from the data
@@ -80,11 +80,7 @@ def compute_mma_score(fights, age, total_losses):
             if fight.get("all_rounds_judges", False):
                 score += 5
 
-            if fight.get("relative_victory", False):
-                rel_pts = 5
-                if is_finish(method):
-                    rel_pts += 5 + finish_streak
-                score += rel_pts
+            # Relative victories are computed separately after scraping
 
         elif result == "Loss":
             all_wins = False
@@ -105,6 +101,13 @@ def compute_mma_score(fights, age, total_losses):
 
     if all_wins and len(fights) >= 5:
         score += 3
+
+    if country:
+        for fight in fights:
+            fight_country = fight.get("fight_country") or fight.get("location_country")
+            if fight_country and fight_country == country and country not in {"USA", "United States"}:
+                score += 5
+                break
 
     return score
 
