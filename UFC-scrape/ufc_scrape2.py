@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Scrape UFC fighter stats and compute a basic MMA math score.
+"""Scrape UFC fighter stats and compute an MMA math rating.
 
-This script replicates ``ufc_scrape.py`` but tailors the data for a
-prototype MMA math model. It pulls fighter information from
-``http://www.ufcstats.com/statistics/fighters`` and examines the last
-five bouts for each fighter. Basic scoring rules derived from the MMA
-model description are applied and saved along with the fighter stats.
+This module mirrors the letter/pagination flow of :mod:`ufc_scrape.py`
+but instead of pushing the data to MySQL it stores a subset of the
+information in ``CSV`` format.  In addition to the basic bio stats we
+calculate a custom "fighter rating" based on the rules provided in the
+prompt.  The scraper examines each fighter's last five bouts and awards
+or deducts points according to the model description.
 
-Note: Running this script requires internet access to ``ufcstats.com``
-and Playwright installed with ``playwright install``.
+Internet access to ``ufcstats.com`` and an installed Playwright runtime
+(``playwright install``) are required for the script to run.
 """
 
 from playwright.sync_api import sync_playwright
@@ -44,52 +45,68 @@ def is_finish(method: str) -> bool:
 
 
 def compute_mma_score(fights, age, total_losses):
-    """Compute a very simplified MMA math score.
+    """Compute a fighter rating following the custom rules.
 
-    Parameters
-    ----------
-    fights : list of dict
-        Output from ``parse_recent_fights`` containing result and method.
-    age : int or None
-        Fighter age.
-    total_losses : int
-        Number of official UFC losses.
+    Only a subset of the model rules can be derived from the data
+    available on the UFC Stats profile pages.  Unknown inputs such as an
+    opponent's ranking simply award no points.  The function still
+    mirrors the logic described in the prompt so that additional data
+    could be plugged in later.
     """
-    points = 0
+
+    score = 0
     finish_streak = 0
     all_wins = True
 
-    for f in fights:
-        res = f.get("result")
-        meth = f.get("method", "")
-        if res == "Win":
-            if is_finish(meth):
-                points += WIN_MAP["finish"]
+    for fight in fights:
+        result = fight.get("result")
+        method = fight.get("method", "") or ""
+        rank = fight.get("opponent_rank")
+        title_bout = fight.get("title_bout", False)
+
+        if result == "Win":
+            if title_bout:
+                score += 16
+            elif isinstance(rank, int) and 1 <= rank <= 15:
+                score += 16 - rank
+
+            if is_finish(method):
+                score += 5
                 finish_streak += 1
-                points += WIN_MAP["finishStreak1x"] * finish_streak
+                score += finish_streak
             else:
                 finish_streak = 0
-        elif res == "Loss":
+
+            if fight.get("all_rounds_judges", False):
+                score += 5
+
+            if fight.get("relative_victory", False):
+                rel_pts = 5
+                if is_finish(method):
+                    rel_pts += 5 + finish_streak
+                score += rel_pts
+
+        elif result == "Loss":
             all_wins = False
             finish_streak = 0
-            if "decision" in meth.lower():
-                points -= 2
+            if "decision" in method.lower():
+                score -= 2
             else:
-                points -= 3
+                score -= 3
         else:
             all_wins = False
             finish_streak = 0
 
     if age and age > 35:
-        points -= 5 + (age - 35)
+        score -= 5 + (age - 35)
 
     if total_losses == 0:
-        points += 5
+        score += 5
 
-    if all_wins and len(fights) == 5:
-        points += 3
+    if all_wins and len(fights) >= 5:
+        score += 3
 
-    return points
+    return score
 
 
 def parse_recent_fights(profile_page):
@@ -106,7 +123,13 @@ def parse_recent_fights(profile_page):
             if result_text in {"", "--", "Scheduled"}:
                 continue
             method = sanitize(cells[6].inner_text().strip()) if len(cells) > 6 else ""
-            fights.append({"result": result_text, "method": method})
+            # Placeholder keys for optional future data (ranking, etc.)
+            fights.append({
+                "result": result_text,
+                "method": method,
+                "opponent_rank": None,
+                "title_bout": False,
+            })
             if len(fights) == 5:
                 break
     except Exception:
@@ -147,7 +170,9 @@ def scrape_ufc_events(output_csv="fighter_mma_scores.csv"):
             for letter_url in letter_urls:
                 current_page = 1
                 page.goto(letter_url)
+                print(f"\nScraping letter tab: {letter_url}")
                 while True:
+                    print(f"Scraping page: {page.url}")
                     rows = page.query_selector_all("tr.b-statistics__table-row")
                     for row in rows:
                         try:
@@ -193,8 +218,13 @@ def scrape_ufc_events(output_csv="fighter_mma_scores.csv"):
                             finally:
                                 try:
                                     prof.close()
+                                    page.wait_for_timeout(300)
                                 except Exception:
                                     pass
+
+                            if page.is_closed():
+                                page = context.new_page()
+                                page.goto(letter_url)
 
                             mma_score = compute_mma_score(fights, age, losses)
                             writer.writerow({
@@ -206,6 +236,7 @@ def scrape_ufc_events(output_csv="fighter_mma_scores.csv"):
                                 "draws": draws,
                                 "mma_score": mma_score,
                             })
+                            print(f"{name} | Age: {age} | Record: {wins}-{losses}-{draws} | Rating: {mma_score}")
                         except Exception:
                             traceback.print_exc()
                             continue
@@ -226,6 +257,7 @@ def scrape_ufc_events(output_csv="fighter_mma_scores.csv"):
                         next_link.click()
                         page.wait_for_timeout(1500)
                     else:
+                        print(f"ALL PAGES SCRAPED FOR LETTER: {letter_url.split('=')[-1].upper()}")
                         break
 
         browser.close()
