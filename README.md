@@ -22,7 +22,11 @@ The script collects general and career-specific stats for each fighter by naviga
   - Strikes Absorbed per Minute (SApM)
   - Striking Defense
   - Takedown Average, Accuracy, Defense
-  - Submission Average
+- Submission Average
+- For each fighter's **last five UFC bouts**:
+  - Opponent name and ranking (or champion status)
+  - Fight result and method of victory
+  - Event date, location and whether judges gave all rounds
 
 ### Additional Data
 
@@ -132,6 +136,8 @@ You need to gather the following fields per fight per fighter:
 Opponent name
 
 Opponent UFC rank at time of fight (0 = Champion, 1 = #1, etc.)
+
+Whether the bout was a title fight (opponent entering as champion)
 
 Win or loss?
 
