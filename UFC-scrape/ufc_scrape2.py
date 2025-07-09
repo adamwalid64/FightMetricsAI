@@ -113,30 +113,75 @@ def compute_mma_score(fights, age, total_losses, country=None):
 
 
 def parse_recent_fights(profile_page):
-    """Parse the last five fights from the fighter profile page."""
+    """Return dictionaries describing the fighter's last five bouts.
+
+    The logic mirrors the win-streak scraping in ``ufc_scrape.py`` but also
+    extracts additional details used by :func:`compute_mma_score`.
+    """
+
     fights = []
     try:
-        profile_page.wait_for_selector("tbody.b-fight-details__table-body", timeout=5000)
-        rows = profile_page.query_selector_all("tbody.b-fight-details__table-body tr")
+        profile_page.wait_for_selector(
+            "tbody.b-fight-details__table-body", timeout=5000
+        )
+        rows = profile_page.query_selector_all(
+            "tbody.b-fight-details__table-body tr"
+        )
         for row in rows:
             cells = row.query_selector_all("td")
-            if len(cells) < 2:
+            if not cells or len(cells) < 2:
                 continue
+
             result_text = cells[0].inner_text().strip().capitalize()
             if result_text in {"", "--", "Scheduled"}:
                 continue
-            method = sanitize(cells[6].inner_text().strip()) if len(cells) > 6 else ""
-            # Placeholder keys for optional future data (ranking, etc.)
-            fights.append({
-                "result": result_text,
-                "method": method,
-                "opponent_rank": None,
-                "title_bout": False,
-            })
+
+            # Columns on the fighter history table typically contain:
+            # result, opponent, event, date, method, round, time, ...
+            method = sanitize(cells[4].inner_text().strip()) if len(cells) > 4 else ""
+            round_val = sanitize(cells[5].inner_text().strip(), int) if len(cells) > 5 else None
+            time_val = sanitize(cells[6].inner_text().strip()) if len(cells) > 6 else ""
+
+            all_rounds = (
+                bool(method and "decision" in method.lower())
+                and time_val == "5:00"
+                and round_val in {3, 5}
+            )
+
+            location_country = None
+            try:
+                event_link_el = cells[2].query_selector("a") if len(cells) > 2 else None
+                event_link = event_link_el.get_attribute("href") if event_link_el else None
+                if event_link:
+                    event_page = profile_page.context.new_page()
+                    event_page.goto(event_link, timeout=10000)
+                    event_page.wait_for_selector("li.b-list__box-list-item", timeout=5000)
+                    for item in event_page.query_selector_all("li.b-list__box-list-item"):
+                        label = (item.query_selector("strong") or item.query_selector("i"))
+                        if label and "location" in label.inner_text().lower():
+                            loc = item.inner_text().split(":")[-1].strip()
+                            location_country = loc.split(",")[-1].strip()
+                            break
+                    event_page.close()
+            except Exception:
+                traceback.print_exc()
+
+            fights.append(
+                {
+                    "result": result_text,
+                    "method": method,
+                    "opponent_rank": None,
+                    "title_bout": False,
+                    "all_rounds_judges": all_rounds,
+                    "location_country": location_country,
+                }
+            )
+
             if len(fights) == 5:
                 break
     except Exception:
         traceback.print_exc()
+
     return fights
 
 
