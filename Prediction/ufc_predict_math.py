@@ -1,140 +1,97 @@
-## MMA Math Model
+from __future__ import annotations
 
-# CREDIT: MMA math model sourced from "The Combat Chronicler" (https://www.youtube.com/watch?v=d6KlvXnHJBo&list=PL58QqkGp8nAxDbF7B8gUx3ODBdPInUq6R&index=10)
+"""MMA Math rating utilities.
 
-# Model Rules --
+This module implements the scoring formula described in the project
+README.  Scores are computed from a fighter's last ``n`` UFC bouts and
+optionally adjusted with "MMA math" relative victory bonuses.
+"""
 
-#   Examine each fighters last 5 fights
-
-#   - Losing:
-    #   1. decision loss: -2 pts
-    #   2. getting finished: -3 pts
-
-#   - Bonus Categories:
-    #   1. Age > 35: -5 pts, -1 extra for each year after
-    #   2. Undefeated in UFC: +5pts
-    #   3. Undefeated in last 5: +3pts
-    #   4. Fighting in country of origin (Excluding US): +5pts
-
-
-import pandas as pd
 from typing import Optional
+import pandas as pd
 
-# Implemented Math Model --
+# ---------------------------------------------------------------------------
+# Helper tables
+# ---------------------------------------------------------------------------
 
-# Point value dictionaries -
-
-#   - Winning:
-    #   1. beating champion: +16 pts
-    #   2. beating rank 1: +15 pts
-    #   3. beating rank 2: +14 pts
-    #   ...
-    #   16. beating rank 15: +1 pt
-
-rankWinMap = {
-    "chmp": 16,
-    "1": 15,
-    "2": 14,
-    "3": 13,
-    "4": 12,
-    "5": 11,
-    "6": 10,
-    "7": 9,
-    "8": 8,
-    "9": 7,
-    "10": 6,
-    "11": 5,
-    "12": 4,
-    "13": 3,
-    "14": 2,
-    "15": 1,
-}
+# Ranking points: champion (0) through rank 15.
+RANK_POINTS = {i: 16 - i for i in range(16)}
+RANK_POINTS[0] = 16
 
 
-
-#   - Methods of winning:
-winMap = {
-    #   1. Finishing an opponent: +5 pts
-    "finish" : 5,
-    #   2. Finish streak: +1 pt for every finish in the streak
-    "finishStreak1x" : 1,
-    #   3. More than 2 judges give you every round: +5 pts
-    "2judgesWin" : 5
-}
-
-#   - Relative Victories:
-    #   1. beat someone who beat opponent: +5 pts / 1 pt if loss was avenged by other fighter
-        # - +5 additional pts if finish, +1 for each in a finish streak
+def is_finish(method: str) -> bool:
+    """Return ``True`` if ``method`` represents a finish."""
+    return bool(method) and "decision" not in method.lower()
 
 
 def _get_last_fights(df: pd.DataFrame, fighter_id: int, last_n: int = 5) -> pd.DataFrame:
-    """Return the last ``last_n`` fights for ``fighter_id`` sorted by most recent."""
+    """Return the last ``last_n`` fights for ``fighter_id`` sorted chronologically."""
     fighter_df = df[df["fighter_id"] == fighter_id]
     if "date" in fighter_df.columns:
-        fighter_df = fighter_df.sort_values("date", ascending=False)
-    return fighter_df.head(last_n)
+        fighter_df = fighter_df.sort_values("date")
+    return fighter_df.tail(last_n)
 
 
 def _base_score(last_fights: pd.DataFrame) -> int:
-    """Calculate the base MMA Math score from a fighter's last fights."""
+    """Calculate the base score without relative victory bonuses."""
+
     score = 0
     finish_streak = 0
 
     for _, row in last_fights.iterrows():
         result = row.get("result", "")
-        method = str(row.get("method", "")).lower()
+        method = row.get("method", "")
+        rank = row.get("opponent_rank")
+        champ = bool(row.get("opponent_is_champ", False))
 
         if result == "Win":
-            rank = row.get("opponent_rank")
-            champ = row.get("opponent_is_champ", False)
             if champ:
-                score += rankWinMap["chmp"]
-            elif pd.notna(rank) and str(int(rank)) in rankWinMap:
-                score += rankWinMap[str(int(rank))]
+                score += RANK_POINTS[0]
+            elif pd.notna(rank) and int(rank) in RANK_POINTS:
+                score += RANK_POINTS[int(rank)]
 
-            if method and method != "decision":
+            if is_finish(method):
                 finish_streak += 1
-                score += winMap["finish"] + winMap["finishStreak1x"] * finish_streak
+                score += 5 + max(finish_streak - 1, 0)
             else:
                 finish_streak = 0
-
-            if row.get("two_judges_all_rounds"):
-                score += winMap["2judgesWin"]
+                if row.get("two_judges_all_rounds"):
+                    score += 5
         elif result == "Loss":
             finish_streak = 0
-            if method and method != "decision":
+            if is_finish(method):
                 score -= 3
             else:
                 score -= 2
         else:
             finish_streak = 0
 
-    # Bonus rules
-    if not last_fights.empty:
-        first_row = last_fights.iloc[0]
-        age = first_row.get("fighter_age")
-        if pd.notna(age) and age > 35:
-            score -= 5 + int(age - 35)
+    if last_fights.empty:
+        return score
 
-        total_losses = first_row.get("fighter_total_losses")
-        if pd.notna(total_losses) and int(total_losses) == 0:
-            score += 5
+    last_row = last_fights.iloc[-1]
+    age = last_row.get("fighter_age")
+    if pd.notna(age) and age > 35:
+        score -= 5 + int(age - 35)
 
-        fighter_country = first_row.get("fighter_country")
-        if pd.notna(fighter_country) and fighter_country not in {"USA", "United States"}:
-            fight_country_col = "fight_country" if "fight_country" in last_fights.columns else "location_country"
-            if fight_country_col in last_fights.columns:
-                if any(pd.notna(row.get(fight_country_col)) and row.get(fight_country_col) == fighter_country for _, row in last_fights.iterrows()):
-                    score += 5
-
-    if last_fights.shape[0] and (last_fights["result"] != "Loss").all():
+    total_losses = last_row.get("fighter_total_losses")
+    if pd.notna(total_losses) and int(total_losses) == 0:
+        score += 5
+    elif (last_fights["result"] != "Loss").all():
         score += 3
+
+    country = last_row.get("fighter_country")
+    if pd.notna(country) and country not in {"USA", "United States"}:
+        ccol = "fight_country" if "fight_country" in last_fights.columns else "location_country"
+        if ccol in last_fights.columns and any(row.get(ccol) == country for _, row in last_fights.iterrows()):
+            score += 5
 
     return score
 
 
 def _relative_victory_score(df: pd.DataFrame, fighter_a: int, fighter_b: int, last_n: int = 5) -> int:
-    """Return bonus points for fighter_a for relative victories over fighter_b."""
+    """Return bonus points for fighter ``fighter_a`` over ``fighter_b``."""
+
     a_fights = _get_last_fights(df, fighter_a, last_n)
     b_fights = _get_last_fights(df, fighter_b, last_n)
 
@@ -143,36 +100,18 @@ def _relative_victory_score(df: pd.DataFrame, fighter_a: int, fighter_b: int, la
         opp = row.get("opponent_id")
         if pd.isna(opp):
             continue
-
-        losses_to_opp = b_fights[(b_fights["opponent_id"] == opp) & (b_fights["result"] == "Loss")]
-        if not losses_to_opp.empty:
-            avenged = b_fights[(b_fights["opponent_id"] == opp) & (b_fights["result"] == "Win") & (b_fights.index > losses_to_opp.index[0])]
-            base = 1 if not avenged.empty else 5
-            if str(row.get("method", "")).lower() != "decision":
-                base += winMap["finish"]
-                base += winMap["finishStreak1x"] * max(int(row.get("finish_streak", 1)) - 1, 0)
-            score += base
+        b_losses = b_fights[(b_fights["opponent_id"] == opp) & (b_fights["result"] == "Loss")]
+        if b_losses.empty:
+            continue
+        loss_index = b_losses.index[0]
+        avenged = not b_fights[(b_fights["opponent_id"] == opp) & (b_fights["result"] == "Win") & (b_fights.index > loss_index)].empty
+        score += 1 if avenged else 5
 
     return score
 
 
 def mathmodel(df: pd.DataFrame, fighter_id: int, opponent_id: Optional[int] = None, last_n: int = 5) -> int:
-    """Calculate the MMA Math score for ``fighter_id``.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        DataFrame containing fight history. Required columns:
-        ``fighter_id``, ``opponent_id``, ``result``, ``method``, ``date`` and
-        ``opponent_rank`` or ``opponent_is_champ``.
-    fighter_id : int
-        Fighter whose score to compute.
-    opponent_id : int, optional
-        If provided, relative victory points against ``opponent_id`` are
-        included in the result.
-    last_n : int, default ``5``
-        Number of most recent fights to consider.
-    """
+    """Compute the total MMA math score for ``fighter_id``."""
 
     last_fights = _get_last_fights(df, fighter_id, last_n)
     score = _base_score(last_fights)
@@ -184,36 +123,7 @@ def mathmodel(df: pd.DataFrame, fighter_id: int, opponent_id: Optional[int] = No
 
 
 def adjusted_scores(df: pd.DataFrame, fighter_a: int, fighter_b: int, last_n: int = 5) -> tuple[int, int]:
-    """Return math model scores for both fighters including relative bonuses."""
+    """Return scores for both fighters in a matchup."""
     score_a = mathmodel(df, fighter_a, opponent_id=fighter_b, last_n=last_n)
     score_b = mathmodel(df, fighter_b, opponent_id=fighter_a, last_n=last_n)
     return score_a, score_b
-
-
-
-
-
-#   Examine each fighters last 5 fights, #   - Winning:
-    #   1. beating champion: +16 pts
-    #   2. beating rank 1: +15 pts
-    #   3. beating rank 2: +14 pts
-    #   ...
-    #   16. beating rank 15: +1 pt, #   - Methods of winning:
-winMap = {
-    #   1. Finishing an opponent: +5 pts
-    "finish" : 5,
-    #   2. Finish streak: +1 pt for every finish in the streak
-    "finishStreak1x" : 1,
-    #   3. More than 2 judges give you every round: +5 pts
-    "2judgesWin" : 5
-} #   - Relative Victories:
-    #   1. beat someone who beat opponent: +5 pts / 1 pt if loss was avenged by other fighter
-        # - +5 additional pts if finish, +1 for each ina  finish streak #   - Losing:
-    #   1. decision loss: -2 pts
-    #   2. getting finished: -3 pts
-
-#   - Bonus Categories:
-    #   1. Age > 35: -5 pts, -1 extra for each year after
-    #   2. Undefeated in UFC: +5pts
-    #   3. Undefeated in last 5: +3pts
-    #   4. Fighting in country of origin (Excluding US): +5pts

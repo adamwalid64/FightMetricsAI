@@ -22,11 +22,10 @@ import traceback
 
 # --- Model scoring helpers --------------------------------------------------
 # Base values taken from the user's MMA math model description.
-WIN_MAP = {
-    "finish": 5,
-    "finishStreak1x": 1,
-    "2judgesWin": 5,
-}
+
+# Ranking points for beating opponents based on their UFC ranking
+RANK_POINTS = {i: 16 - i for i in range(16)}
+RANK_POINTS[0] = 16
 
 
 def sanitize(value, convert_func=None):
@@ -63,67 +62,59 @@ def is_finish(method: str) -> bool:
 
 
 def compute_mma_score(fights, age, total_losses, country=None):
-    """Compute a fighter rating following the custom rules.
-
-    Only a subset of the model rules can be derived from the data
-    available on the UFC Stats profile pages.  Unknown inputs such as an
-    opponent's ranking simply award no points.  The function still
-    mirrors the logic described in the prompt so that additional data
-    could be plugged in later.
-    """
+    """Compute a fighter rating following the MMA math rules."""
 
     score = 0
     finish_streak = 0
     all_wins = True
 
+    # fights are expected oldest -> newest
     for fight in fights:
         result = fight.get("result")
         method = fight.get("method", "") or ""
         rank = fight.get("opponent_rank")
-        title_bout = fight.get("title_bout", False)
+        champ = fight.get("opponent_is_champ", False)
 
         if result == "Win":
-            if title_bout:
-                score += 16
-            elif isinstance(rank, int) and 1 <= rank <= 15:
-                score += 16 - rank
+            if champ:
+                score += RANK_POINTS[0]
+            elif isinstance(rank, int) and 0 <= rank <= 15:
+                score += RANK_POINTS.get(rank, 0)
 
             if is_finish(method):
-                score += 5
                 finish_streak += 1
-                score += finish_streak
+                score += 5 + max(finish_streak - 1, 0)
             else:
                 finish_streak = 0
-
-            if fight.get("all_rounds_judges", False):
-                score += 5
-
-            # Relative victories are computed separately after scraping
-
+                if fight.get("all_rounds_judges", False):
+                    score += 5
         elif result == "Loss":
             all_wins = False
             finish_streak = 0
-            if "decision" in method.lower():
-                score -= 2
-            else:
+            if is_finish(method):
                 score -= 3
+            else:
+                score -= 2
         else:
             all_wins = False
             finish_streak = 0
 
-    if age and age > 35:
+    if age is not None and age > 35:
         score -= 5 + (age - 35)
 
     if total_losses == 0:
         score += 5
-
-    if all_wins and len(fights) >= 5:
+    elif all_wins and len(fights) >= 5:
         score += 3
 
     if country:
         for fight in fights:
             fight_country = fight.get("fight_country") or fight.get("location_country")
-            if fight_country and fight_country == country and country not in {"USA", "United States"}:
+            if (
+                fight_country
+                and fight_country == country
+                and country not in {"USA", "United States"}
+            ):
                 score += 5
                 break
 
@@ -154,8 +145,15 @@ def parse_recent_fights(profile_page):
             if result_text in {"", "--", "Scheduled"}:
                 continue
 
-            # Columns on the fighter history table typically contain:
-            # result, opponent, event, date, method, round, time, ...
+            opponent_name = cells[1].inner_text().strip() if len(cells) > 1 else ""
+            event_text = cells[3].inner_text().strip() if len(cells) > 3 else ""
+            fight_date = None
+            if event_text:
+                try:
+                    fight_date = parse_date(event_text, fuzzy=True).date()
+                except Exception:
+                    fight_date = None
+
             method = sanitize(cells[4].inner_text().strip()) if len(cells) > 4 else ""
             round_val = sanitize(cells[5].inner_text().strip(), int) if len(cells) > 5 else None
             time_val = sanitize(cells[6].inner_text().strip()) if len(cells) > 6 else ""
@@ -188,10 +186,12 @@ def parse_recent_fights(profile_page):
                 {
                     "result": result_text,
                     "method": method,
+                    "opponent": opponent_name,
                     "opponent_rank": None,
-                    "title_bout": False,
+                    "opponent_is_champ": False,
                     "all_rounds_judges": all_rounds,
                     "location_country": location_country,
+                    "date": fight_date,
                 }
             )
 
@@ -260,6 +260,7 @@ def scrape_ufc_events(output_csv="fighter_mma_scores.csv"):
 
                             # --- scrape profile for age and recent fights ---
                             age = None
+                            country = None
                             fights = []
                             try:
                                 prof = context.new_page()
@@ -271,13 +272,16 @@ def scrape_ufc_events(output_csv="fighter_mma_scores.csv"):
                                     if not label_el:
                                         continue
                                     label = label_el.inner_text().strip().lower()
+                                    value = item.inner_text().replace(label_el.inner_text(), "").strip()
                                     if "date of birth" in label or "dob" in label:
-                                        dob_str = item.inner_text().replace(label_el.inner_text(), "").strip()
-                                        dob_clean = re.sub(r"\(.*?\)", "", dob_str).strip()
+                                        dob_clean = re.sub(r"\(.*?\)", "", value).strip()
                                         dob_date = parse_date(dob_clean, fuzzy=True).date()
                                         today = datetime.today().date()
-                                        age = today.year - dob_date.year - ((today.month, today.day) < (dob_date.month, dob_date.day))
-                                        break
+                                        age = today.year - dob_date.year - (
+                                            (today.month, today.day) < (dob_date.month, dob_date.day)
+                                        )
+                                    elif "fighting out of" in label or "country" in label or "birth place" in label:
+                                        country = value.split(",")[-1].strip()
                                 fights = parse_recent_fights(prof)
                             except Exception:
                                 traceback.print_exc()
@@ -292,7 +296,7 @@ def scrape_ufc_events(output_csv="fighter_mma_scores.csv"):
                                 page = context.new_page()
                                 page.goto(letter_url)
 
-                            mma_score = compute_mma_score(fights, age, losses)
+                            mma_score = compute_mma_score(fights, age, losses, country)
                             writer.writerow({
                                 "name": name,
                                 "nickname": nickname,
