@@ -193,9 +193,21 @@ def parse_recent_fights(profile_page):
                     fight_page.goto(fight_link, timeout=10000)
                     fight_page.wait_for_selector("body", timeout=5000)
                     body_text = fight_page.inner_text("body").lower()
-                    if "title fight" in body_text or "championship" in body_text:
+
+                    champ_keywords = [
+                        "title fight",
+                        "title bout",
+                        "championship bout",
+                        "championship",
+                        "world championship",
+                        "ufc title",
+                    ]
+                    if any(k in body_text for k in champ_keywords):
                         opponent_is_champ = True
-                    rank_match = re.search(r"rank[^\d]*(\d+)", body_text)
+
+                    rank_match = re.search(r"(?:rank|ranked)\s*#?\s*(\d+)", body_text)
+                    if not rank_match:
+                        rank_match = re.search(r"#(\d+)", body_text)
                     if rank_match:
                         opponent_rank = int(rank_match.group(1))
                     fight_page.close()
