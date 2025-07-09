@@ -7,7 +7,7 @@ CREATE TABLE ufc_fighters (
     name VARCHAR(30),
     nickname VARCHAR(30),
     dob VARCHAR(30),
-    age INT NOT NULL,
+    age INT,
     height VARCHAR(30),
     weight INT,
     reach DECIMAL(5,2),

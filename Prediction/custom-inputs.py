@@ -5,7 +5,7 @@ import pandas as pd
 model = joblib.load("xgb_ufc_model.pkl")
 
 # Read in up-to-date dataset
-df = pd.read_csv("../Data/scraped-ufc-data.csv", sep=';')
+df = pd.read_csv("../Data/raw-scraped-ufc-data2.csv", sep=',')
 print(df.columns)
 
 # helper function to clean data to match ML dataset
@@ -28,7 +28,7 @@ print(height_str_to_cm("5' 11\""))  # ➜ 180
 # enter fighter ids ex: calcdiff(64, 22)
 def getCustomPredict(fighter1, fighter2):
     columns = ['SLpM', 'SApM', 'Str_Acc', 'TD_Acc', 'Str_Def', 'TD_Def', 'Sub_Avg',
-               'TD_Avg', 'age', 'height', 'weight', 'reach', 'wins', 'losses']
+               'TD_Avg', 'age', 'height', 'reach', 'wins', 'losses']
 
     f1 = df.loc[df['id'] == fighter1, columns].iloc[0]
     f2 = df.loc[df['id'] == fighter2, columns].iloc[0]
@@ -49,7 +49,7 @@ def getCustomPredict(fighter1, fighter2):
             'td_avg_diff': winner['TD_Avg'] - loser['TD_Avg'],
             'age_diff': winner['age'] - loser['age'],
             'height_diff': winner_height - loser_height,
-            'weight_diff': winner['weight'] - loser['weight'],
+            # 'weight_diff': winner['weight'] - loser['weight'],
             'reach_diff': winner['reach'] - loser['reach'],
             'wins_total_diff': winner['wins'] - loser['wins'],
             'losses_total_diff': winner['losses'] - loser['losses']
@@ -115,12 +115,12 @@ def getCustomPredict(fighter1, fighter2):
 # Imavov id: 1313
 # getCustomPredict(18, 1313)
 
-# REAL TIME TEST 9: Hit --- Moicano vs. Dariush
-# Moicano id: 1943
-# Dariush id: 658
+# # REAL TIME TEST 9: Hit --- Moicano vs. Dariush
+# # Moicano id: 1943
+# # Dariush id: 658
 # getCustomPredict(1943, 658)
-# Prediction: Dariush
-# Win: 10/10 profit
+# # Prediction: Dariush
+# # Win: 10/10 profit
 
 # REAL TIME TEST 10: Hit --- Topuria vs. Oliveira
 # Oliveira id: 2141
@@ -154,3 +154,8 @@ def getCustomPredict(fighter1, fighter2):
 # Song id: 2811
 # getCustomPredict(494, 2811)
 # Prediction: DDP
+
+# REAL TIME TEST 15: SUCCESS --- Pantoja vs Kai kara-France
+# Pantoja id: 2685
+# Kai kara-France id: 1737
+# getCustomPredict(1737, 2685)
