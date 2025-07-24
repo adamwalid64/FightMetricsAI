@@ -5,12 +5,14 @@ import bluefighter from '../img/bluerobo.png'
 import redfighter from '../img/redrobo.png'
 import FeatureImportanceChart from './FeatureImportanceChart';
 
+
 function App() {
   const [fighterOne, setFighterOne] = useState('');
   const [fighterTwo, setFighterTwo] = useState('');
   const [prediction, setPrediction] = useState(null);
   const [confidence, setConfidence] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [activeSection, setActiveSection] = useState('predict');
 
   useEffect(() => {
     const canvas = document.getElementById('decision-canvas');
@@ -157,6 +159,7 @@ function App() {
           <ul>
             <li><a href="#features">Features</a></li>
             <li><a href="#predict">Predict</a></li>
+
             <li><a href="#contact">Contact</a></li>
           </ul>
         </nav>
@@ -1550,6 +1553,8 @@ function App() {
 
           
         </section>
+        
+
       </main>
       <footer id="contact">
         <p>&copy; {new Date().getFullYear()} FightMetricsAI - All rights reserved.</p>

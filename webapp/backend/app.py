@@ -9,6 +9,8 @@ import pandas as pd
 import custom_inputs
 from custom_inputs import getCustomPredict
 
+
+
 # Read in csv file
 DATA_PATH = os.path.join(os.path.dirname(__file__), 'scraped-ufc-data.csv')
 df = pd.read_csv(DATA_PATH, sep=';')
@@ -22,6 +24,8 @@ def get_fighter_id(name, df):
 
 app = Flask(__name__)
 CORS(app)
+
+
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'xgb_ufc_model.pkl')
 model = joblib.load(MODEL_PATH)
