@@ -52,7 +52,8 @@ WHERE
         Sub_Avg = 0.00
     );
 
-SELECT * FROM ufc_data.clean_ufc_fights LIMIT 5000;
+SELECT * FROM ufc_data.clean_ufc_fights WHERE name="Grant"
+LIMIT 5000;
 
 
 -- ID search for live prediction

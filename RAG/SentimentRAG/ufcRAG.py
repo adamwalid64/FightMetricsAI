@@ -9,7 +9,7 @@ from langchain.chains import RetrievalQA
 import tiktoken
 
 # Load API key from .env
-load_dotenv()
+load_dotenv("../../.env")  # Load from project root
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Config

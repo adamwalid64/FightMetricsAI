@@ -170,7 +170,7 @@ def extract_article_info(url):
             'url': url
         }
 
-def scrape_ufc_sentiment(topic):
+def scrape_ufc_sentiment(topic, progress_callback=None):
     try:
         articles = []
         
@@ -184,6 +184,9 @@ def scrape_ufc_sentiment(topic):
             url = f"https://search.yahoo.com/search?p={query}&fr=news"
             print(f"Navigating to: {url}")
             
+            if progress_callback:
+                progress_callback(5, "Launching browser and navigating to search page...")
+            
             page.goto(url)
             
             # Wait for the page to load
@@ -191,12 +194,20 @@ def scrape_ufc_sentiment(topic):
             # Add a small delay to ensure dynamic content loads
             time.sleep(2)
             print("Browser is now open. Press Ctrl+C to close it.")
+            
+            if progress_callback:
+                progress_callback(8, "Search page loaded, starting to scrape articles...")
 
             # Loop through all possible pages
             current_page = 1
             max_pages = 10  # Capped at 10 pages
             while current_page <= max_pages:
                 print(f"Scraping page {current_page}...")
+                
+                # Calculate progress based on page number (8% + pages contribute to 32% = 40% total for scraping)
+                page_progress = 8 + ((current_page - 1) / max_pages) * 32
+                if progress_callback:
+                    progress_callback(page_progress, f"Scraping page {current_page} of search results...")
                 
                 # Wait for the page to load
                 page.wait_for_load_state('networkidle')
@@ -218,6 +229,11 @@ def scrape_ufc_sentiment(topic):
                     print(f"Link {counter}: {link}")
                     counter += 1
                     articles.append(link)
+                
+                # Update progress after collecting links from this page
+                page_progress_after = 8 + (current_page / max_pages) * 32
+                if progress_callback:
+                    progress_callback(page_progress_after, f"Collected {len(links)} article links from page {current_page}")
 
                 # Try to find the next page link with multiple strategies
                 next_page_found = False
@@ -286,9 +302,15 @@ def scrape_ufc_sentiment(topic):
             print(f"Total articles scraped: {len(articles)}")
             browser.close()
             
+            if progress_callback:
+                progress_callback(40, f"Scraping completed. Found {len(articles)} article links total.")
+            
         # Extract article information
         print("\nExtracting article information...")
         article_data = []
+        
+        if progress_callback:
+            progress_callback(42, "Starting to extract content from articles...")
         
         # Video platforms to exclude
         video_platforms = [
@@ -303,6 +325,11 @@ def scrape_ufc_sentiment(topic):
         for i, article_url in enumerate(articles, 1):
             try:
                 print(f"Processing article {i}/{len(articles)}: {article_url}")
+                
+                # Calculate progress for article extraction (42% to 50%)
+                extraction_progress = 42 + ((i - 1) / len(articles)) * 8
+                if progress_callback:
+                    progress_callback(extraction_progress, f"Extracting content from article {i}/{len(articles)}...")
                 
                 # Skip video platforms
                 if any(platform in article_url.lower() for platform in video_platforms):
@@ -325,6 +352,11 @@ def scrape_ufc_sentiment(topic):
                 # Add all articles without filtering
                 article_data.append(article_info)
                 print(f"Successfully processed: {article_info['title'][:50]}...")
+                
+                # Update progress after successful extraction
+                extraction_progress_after = 42 + (i / len(articles)) * 8
+                if progress_callback:
+                    progress_callback(extraction_progress_after, f"Successfully extracted {len(article_data)} articles so far")
                 
             except Exception as e:
                 print(f"Error processing article {i}: {e}")
@@ -349,6 +381,9 @@ def scrape_ufc_sentiment(topic):
         
         print(f"\nSaving {len(article_data)} articles to {csv_filename}...")
         
+        if progress_callback:
+            progress_callback(48, f"Saving {len(article_data)} extracted articles to CSV file...")
+        
         with open(csv_filename, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = ['title', 'text', 'publish_date', 'url']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -358,6 +393,9 @@ def scrape_ufc_sentiment(topic):
                 writer.writerow(article)
         
         print(f"Successfully saved {len(article_data)} articles to {csv_filename}")
+        
+        if progress_callback:
+            progress_callback(50, f"Scraping completed! Successfully saved {len(article_data)} articles.")
         
         # Create a pandas DataFrame for easy analysis
         df = pd.DataFrame(article_data)

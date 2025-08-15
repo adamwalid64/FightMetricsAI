@@ -1,0 +1,16 @@
+# Environment variables and API keys (COVER ALL SUBDIRECTORIES)
+.env
+.env.local
+.env.development
+.env.production
+*.env
+**/.env
+**/.env.*
+
+# API key files
+api_keys.txt
+secrets.json
+config.ini
+**/api_keys.txt
+**/secrets.json
+**/config.ini

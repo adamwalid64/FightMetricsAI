@@ -1,0 +1,268 @@
+.feature-importance-container {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: 1rem;
+}
+
+.feature-importance-container h3 {
+  color: #fff;
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.feature-explanation {
+  color: #ccc;
+  font-size: 0.9rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+.loading-message, .error-message {
+  color: #fff;
+  text-align: center;
+  padding: 2rem;
+  font-size: 1rem;
+}
+
+.error-message {
+  color: #ff6b6b;
+}
+
+.slideshow-container {
+  position: relative;
+  margin-bottom: 2rem;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.slideshow-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.slide {
+  transition: all 0.3s ease-in-out;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.slide.transitioning {
+  opacity: 0.8;
+  transform: translateX(10px);
+}
+
+.model-chart {
+  padding: 1rem;
+  min-height: 400px;
+}
+
+.chart-wrapper {
+  height: 350px;
+  position: relative;
+}
+
+.slideshow-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+  padding: 0 1rem;
+  max-width: 100%; /* Prevent overflow */
+}
+
+
+
+.slide-indicators {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center; /* Center the indicators */
+  flex-wrap: wrap; /* Allow wrapping if needed */
+  max-width: 100%; /* Prevent overflow */
+}
+
+.indicator {
+  background: linear-gradient(135deg, var(--model-color), var(--model-color-solid));
+  border: 2px solid var(--model-color-solid);
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px; /* Fixed uniform width for all buttons */
+  height: 40px; /* Fixed uniform height for all buttons */
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0; /* Prevent shrinking */
+  opacity: 0.6; /* Make inactive buttons more subtle */
+}
+
+.indicator:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--model-color), var(--model-color-solid));
+  border-color: var(--model-color-solid);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--model-color);
+  opacity: 0.8;
+}
+
+.indicator.active {
+  background: linear-gradient(135deg, var(--model-color), var(--model-color-solid));
+  border-color: var(--model-color-solid);
+  box-shadow: 0 4px 15px var(--model-color);
+  transform: translateY(-2px) scale(1.1); /* Enlarge the active button */
+  width: 132px; /* Slightly larger width when active */
+  height: 44px; /* Slightly larger height when active */
+  opacity: 1; /* Make active button fully visible */
+}
+
+.indicator-label {
+  color: #e0e0e0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.indicator.active .indicator-label {
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.feature-legend {
+  background: rgba(179, 67, 69, 0.1);
+  border: 1px solid rgba(179, 67, 69, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.feature-legend h4 {
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  text-align: center;
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.5rem;
+}
+
+.legend-item {
+  color: #e0e0e0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  padding: 0.25rem 0;
+}
+
+.legend-item strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .feature-importance-container {
+    padding: 1rem;
+  }
+  
+  .model-chart {
+    min-height: 300px;
+  }
+  
+  .chart-wrapper {
+    height: 250px;
+  }
+  
+  .slideshow-controls {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .slide-indicators {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+    margin: 0.5rem 0;
+    flex-wrap: wrap;
+  }
+  
+  .indicator {
+    width: 100px;
+    height: 35px;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .indicator.active {
+    width: 110px;
+    height: 38px;
+  }
+  
+  .indicator-label {
+    font-size: 0.6rem;
+  }
+  
+  .legend-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .feature-explanation {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .feature-importance-container h3 {
+    font-size: 1.1rem;
+  }
+  
+  .model-chart {
+    min-height: 250px;
+    padding: 0.75rem;
+  }
+  
+  .chart-wrapper {
+    height: 200px;
+  }
+  
+  .slide-indicators {
+    gap: 0.25rem;
+  }
+  
+  .indicator {
+    width: 80px;
+    height: 30px;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .indicator.active {
+    width: 88px;
+    height: 33px;
+  }
+  
+  .indicator-label {
+    font-size: 0.6rem;
+  }
+  
+  .legend-item {
+    font-size: 0.75rem;
+  }
+}

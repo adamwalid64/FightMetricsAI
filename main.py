@@ -60,7 +60,7 @@ def masterPrediction(fighter1id, fighter2id):
         print("RAG Analysis failed - no sentiment data available for this fight.")
 
 
-masterPrediction(1862, 1374)
+masterPrediction(3544, 2697)
 
 
 
