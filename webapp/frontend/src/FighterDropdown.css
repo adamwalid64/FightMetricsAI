@@ -1,6 +1,12 @@
 .fighter-dropdown {
   position: relative;
   width: 100%;
+  z-index: 1000;
+}
+
+/* First fighter dropdown (fighter one) gets highest priority */
+.fighter-dropdown:first-of-type {
+  z-index: 10000;
 }
 
 .fighter-dropdown .fighter-input {
@@ -8,6 +14,7 @@
   text-align: center;
   width: 100%;
   box-sizing: border-box;
+  position: relative;
 }
 
 .fighter-dropdown .fighter-image {
@@ -15,10 +22,18 @@
   height: 150px;
   margin-bottom: 0.8rem;
   transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 
 .fighter-dropdown .fighter-image:hover {
   transform: translateY(-3px);
+  cursor: pointer;
+}
+
+.fighter-dropdown .fighter-image:active {
+  transform: translateY(-1px);
 }
 
 .fighter-dropdown .fighter-image img {
@@ -76,7 +91,7 @@
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(15px);
-  z-index: 1000;
+  z-index: 1001;
   max-height: 300px;
   overflow: hidden;
   margin: 5px 0 0 0;
@@ -173,12 +188,67 @@
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .fighter-dropdown .dropdown-menu {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90vw;
-    max-width: 400px;
-    max-height: 70vh;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    max-height: 60vh;
+    z-index: 1002;
+    overflow: hidden;
+  }
+  
+  /* Ensure the dropdown appears above other elements on mobile */
+  .fighter-dropdown {
+    z-index: 1001;
+  }
+  
+  /* Adjust dropdown positioning for very small screens */
+  .fighter-dropdown .dropdown-menu {
+    margin-top: 2px;
+  }
+  
+  /* Prevent dropdown from extending beyond screen boundaries */
+  .fighter-dropdown .dropdown-options {
+    max-height: calc(60vh - 60px); /* Account for search input height */
+    overflow-y: auto;
+  }
+  
+  /* Ensure fighter images don't interfere with dropdown */
+  .fighter-dropdown .fighter-image {
+    z-index: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .fighter-dropdown .dropdown-menu {
+    max-height: 50vh;
+    margin-top: 1px;
+    z-index: 1002;
+  }
+  
+  .fighter-dropdown .custom-search-container {
+    padding: 10px;
+  }
+  
+  .fighter-dropdown .custom-search-input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .fighter-dropdown .dropdown-option {
+    padding: 10px;
+    font-size: 13px;
+  }
+  
+  /* Ensure proper z-index stacking on very small screens */
+  .fighter-dropdown {
+    z-index: 1001;
+  }
+  
+  .fighter-dropdown .fighter-image {
+    z-index: 1;
   }
 }

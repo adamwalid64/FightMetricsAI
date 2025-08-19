@@ -18,6 +18,7 @@ function App() {
   const [fighterTwo, setFighterTwo] = useState('');
   const [prediction, setPrediction] = useState(null);
   const [modelPredictions, setModelPredictions] = useState(null);
+  const [ensemblePrediction, setEnsemblePrediction] = useState(null);
   const [fighter1Votes, setFighter1Votes] = useState(0);
   const [fighter2Votes, setFighter2Votes] = useState(0);
   const [activeSection, setActiveSection] = useState('predict');
@@ -217,6 +218,7 @@ function App() {
       const data = await res.json();
       setPrediction(data.prediction);
       setModelPredictions(data.model_predictions);
+      setEnsemblePrediction(data.ensemble_prediction);
       setFighter1Votes(data.fighter1_votes);
       setFighter2Votes(data.fighter2_votes);
     } catch (err) {
@@ -278,7 +280,7 @@ function App() {
           <div className="feature-list">
             <div className="feature">
               <h3>Machine Learning</h3>
-              <p>Run a UFC fight prediction using an ensemble of XGBoost, Logistic Regression, and CatBoost models trained on decades of historical data. Analyze fighter stats, performance trends, and matchup-specific factors to deliver a probability-based forecast with proven predictive accuracy</p>
+              <p>Run a UFC fight prediction using an advanced ensemble system combining XGBoost, Logistic Regression, CatBoost, and MLP models. The ensemble uses Out-of-Fold stacking with a meta-learner to deliver superior predictions, trained on decades of historical data with proven accuracy.</p>
             </div>
             <div className="feature-arrow">
               <div className="arrow-line"></div>
@@ -314,7 +316,7 @@ function App() {
                   <h3>Machine Learning Fight Analysis</h3>
                 </div>
                 <p className="tool-description">
-                Use an ensemble of advanced machine learning models—trained on decades of UFC statistics—to predict fight outcomes and reveal key differences in fighter metrics, leveraging the combined strengths of Logistic Regression, XGBoost, and CatBoost for deeper insights
+                Use an ensemble system combining XGBoost, Logistic Regression, CatBoost, and MLP models with Out-of-Fold stacking and a meta-learner. This approach leverages the strengths of multiple algorithms trained on decades of UFC statistics to deliver superior fight predictions with greater accuracy and confidence
                 </p>
                 <div className="fighter-selection">
                   <FighterDropdown
@@ -352,6 +354,45 @@ function App() {
                   <div className="prediction-results">
                     <h4 style={{color: 'white', marginBottom: '15px'}}>Prediction Results</h4>
                     
+                    {/* Ensemble Prediction - Show prominently if available */}
+                    {ensemblePrediction && (
+                      <div className="ensemble-result" style={{
+                        backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                        border: '2px solid rgba(76, 175, 80, 0.6)',
+                        padding: '20px',
+                        borderRadius: '12px',
+                        marginBottom: '25px',
+                        textAlign: 'center'
+                      }}>
+                        <h5 style={{color: '#4CAF50', margin: '0 0 15px 0', fontSize: '18px'}}>
+                          🎯 Ensemble Prediction
+                        </h5>
+                        <p style={{color: 'white', fontSize: '24px', fontWeight: 'bold', margin: '0 0 10px 0'}}>
+                          {ensemblePrediction.winner_name} wins!
+                        </p>
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-around',
+                          marginTop: '15px',
+                          flexWrap: 'wrap',
+                          gap: '10px'
+                        }}>
+                          <div style={{textAlign: 'center'}}>
+                            <span style={{color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px'}}>Probability</span>
+                            <p style={{color: 'white', fontSize: '18px', fontWeight: 'bold', margin: '5px 0 0 0'}}>
+                              {(ensemblePrediction.ensemble_probability * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                          <div style={{textAlign: 'center'}}>
+                            <span style={{color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px'}}>Confidence</span>
+                            <p style={{color: 'white', fontSize: '18px', fontWeight: 'bold', margin: '5px 0 0 0'}}>
+                              {(ensemblePrediction.confidence * 100).toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Overall Result */}
                     <div className="overall-result" style={{
                       backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -360,18 +401,25 @@ function App() {
                       marginBottom: '20px',
                       textAlign: 'center'
                     }}>
-                      <h5 style={{color: 'white', margin: '0 0 10px 0'}}>Overall Prediction</h5>
+                      <h5 style={{color: 'white', margin: '0 0 10px 0'}}>
+                        {ensemblePrediction ? 'Final Prediction' : 'Overall Prediction'}
+                      </h5>
                       <p style={{color: 'white', fontSize: '18px', fontWeight: 'bold', margin: '0'}}>
                         {prediction} wins!
                       </p>
                       <p style={{color: 'white', fontSize: '14px', margin: '5px 0 0 0'}}>
-                        {prediction === fighterOne ? fighter1Votes : fighter2Votes}/3 models picked {prediction}
+                        {ensemblePrediction 
+                          ? `Ensemble confidence: ${(ensemblePrediction.confidence * 100).toFixed(1)}%`
+                          : `${prediction === fighterOne ? fighter1Votes : fighter2Votes}/4 models picked ${prediction}`
+                        }
                       </p>
                     </div>
                     
-                    {/* Individual Model Results */}
+                    {/* Individual Model Results - Four Models */}
                     <div className="model-breakdown">
-                      <h5 style={{color: 'white', marginBottom: '15px'}}>Model Breakdown</h5>
+                      <h5 style={{color: 'white', marginBottom: '15px'}}>
+                        {ensemblePrediction ? 'Base Model Predictions' : 'Individual Model Predictions'}
+                      </h5>
                       {Object.entries(modelPredictions).map(([modelName, modelData]) => (
                         <div key={modelName} style={{
                           backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -421,6 +469,39 @@ function App() {
                         </div>
                       ))}
                     </div>
+                    
+                    {/* Ensemble Base Model Contributions - Show if ensemble is available */}
+                    {ensemblePrediction && ensemblePrediction.base_predictions && (
+                      <div className="ensemble-contributions">
+                        <h5 style={{color: 'white', marginBottom: '15px'}}>Ensemble Model Contributions</h5>
+                        <div style={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          padding: '15px',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <p style={{color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px', marginBottom: '10px'}}>
+                            How each base model contributed to the final ensemble prediction:
+                          </p>
+                          {Object.entries(ensemblePrediction.base_predictions).map(([modelName, prob]) => (
+                            <div key={modelName} style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px 0',
+                              borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+                            }}>
+                              <span style={{color: 'white', fontSize: '14px'}}>
+                                {modelName.toUpperCase()}
+                              </span>
+                              <span style={{color: '#4CAF50', fontSize: '14px', fontWeight: 'bold'}}>
+                                {(prob * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
                 

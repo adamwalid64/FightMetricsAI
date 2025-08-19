@@ -1,0 +1,25 @@
+{
+  "features": [
+    "SLpM_total_diff",
+    "SApM_total_diff",
+    "sig_str_acc_total_diff",
+    "td_acc_total_diff",
+    "str_def_total_diff",
+    "td_def_total_diff",
+    "sub_avg_diff",
+    "td_avg_diff",
+    "age_diff",
+    "height_diff",
+    "reach_diff",
+    "wins_total_diff",
+    "losses_total_diff"
+  ],
+  "input_dim": 13,
+  "hidden": [
+    96,
+    48,
+    24
+  ],
+  "dropout": 0.1,
+  "threshold": 0.5
+}

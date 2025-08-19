@@ -60,10 +60,16 @@ const FighterDropdown = ({
     setFilteredFighters(fighters);
   };
 
+  const handleImageClick = () => {
+    setIsOpen(false);
+    setSearchTerm('');
+    setFilteredFighters(fighters);
+  };
+
   return (
     <div className="fighter-dropdown" ref={dropdownRef}>
       <div className="fighter-input">
-        <div className="fighter-image">
+        <div className="fighter-image" onClick={handleImageClick}>
           <img src={fighterImage} alt={altText} className="robofighter-image" />
         </div>
         <input

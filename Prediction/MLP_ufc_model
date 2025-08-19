@@ -1,0 +1,296 @@
+# ======= YOUR EXISTING BLOCK (from your message) =======
+import os, json, math, random
+import numpy as np
+import pandas as pd
+from dataclasses import dataclass
+from typing import List, Tuple
+
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (accuracy_score, balanced_accuracy_score, f1_score,
+                             classification_report, confusion_matrix)
+import joblib
+
+df = pd.read_csv("../Data\\large_dataset.csv")
+
+# Reverse the dataset to begin with the oldest fight
+df = df.iloc[::-1].reset_index(drop=True)
+
+# Create binary winner label
+df['winner_binary'] = df['winner'].map({'Red': 1, 'Blue': 0})
+
+diff_features = [
+    'SLpM_total_diff', 'SApM_total_diff', 'sig_str_acc_total_diff',
+    'td_acc_total_diff', 'str_def_total_diff', 'td_def_total_diff',
+    'sub_avg_diff', 'td_avg_diff', 'age_diff', 'height_diff',
+    'reach_diff', 'wins_total_diff', 'losses_total_diff'
+]
+
+# Drop rows with missing values in key columns
+df = df.dropna(subset=diff_features + ['winner_binary'])
+
+# Reverse for chronological ordering (latest at end)
+df = df.iloc[::-1].reset_index(drop=True)
+
+# Chronological split: first 2/3 train, last 1/3 test
+split_idx = int(len(df) * (2 / 3))
+train_df = df.iloc[:split_idx]
+test_df  = df.iloc[split_idx:]
+
+# Define features and targets
+X_train = train_df[diff_features]
+y_train = train_df['winner_binary']
+X_test  = test_df[diff_features]
+y_test  = test_df['winner_binary']
+
+# ======= CONTINUE HERE (everything below is new) =======
+
+# -----------------------
+# Repro, device, artifact paths
+# -----------------------
+RANDOM_STATE = 42
+def set_seed(seed=RANDOM_STATE):
+    random.seed(seed); np.random.seed(seed); torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+set_seed()
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+ARTIFACT_DIR = "torch_mlp_artifacts"
+os.makedirs(ARTIFACT_DIR, exist_ok=True)
+SCALER_PATH = os.path.join(ARTIFACT_DIR, "scaler.pkl")
+MODEL_PATH  = os.path.join(ARTIFACT_DIR, "model.pt")
+META_PATH   = os.path.join(ARTIFACT_DIR, "meta.json")
+
+# -----------------------
+# Make a small validation split from your train chunk
+# -----------------------
+X_tr, X_val, y_tr, y_val = train_test_split(
+    X_train, y_train, test_size=0.15, stratify=y_train, random_state=RANDOM_STATE
+)
+
+# -----------------------
+# Scale (fit on train only)
+# -----------------------
+scaler = StandardScaler()
+X_tr  = scaler.fit_transform(X_tr.values.astype(float))
+X_val = scaler.transform(X_val.values.astype(float))
+X_te  = scaler.transform(X_test.values.astype(float))
+joblib.dump(scaler, SCALER_PATH)
+
+y_tr  = y_tr.values.astype(int)
+y_val = y_val.values.astype(int)
+y_te  = y_test.values.astype(int)
+
+# -----------------------
+# Torch Dataset / Loaders
+# -----------------------
+class NPDataset(Dataset):
+    def __init__(self, X, y):
+        self.X = torch.tensor(X, dtype=torch.float32)
+        self.y = torch.tensor(y, dtype=torch.float32)  # BCEWithLogitsLoss expects float targets
+    def __len__(self): return self.X.shape[0]
+    def __getitem__(self, i): return self.X[i], self.y[i]
+
+train_ds = NPDataset(X_tr, y_tr)
+val_ds   = NPDataset(X_val, y_val)
+test_ds  = NPDataset(X_te, y_te)
+
+def make_loaders(batch_size=256):
+    return (
+        DataLoader(train_ds, batch_size=batch_size, shuffle=True),
+        DataLoader(val_ds,   batch_size=batch_size, shuffle=False),
+        DataLoader(test_ds,  batch_size=batch_size, shuffle=False),
+    )
+
+# -----------------------
+# MLP model (BatchNorm + Dropout)
+# -----------------------
+class MLP(nn.Module):
+    def __init__(self, in_dim: int, hidden=(128,64,32), dropout=0.15):
+        super().__init__()
+        layers = []
+        prev = in_dim
+        for h in hidden:
+            layers += [nn.Linear(prev, h), nn.BatchNorm1d(h), nn.ReLU(), nn.Dropout(dropout)]
+            prev = h
+        layers += [nn.Linear(prev, 1)]  # binary logit
+        self.net = nn.Sequential(*layers)
+    def forward(self, x):
+        return self.net(x).squeeze(1)
+
+# -----------------------
+# Class imbalance -> pos_weight (for Red=1)
+# -----------------------
+pos = (y_tr == 1).sum()
+neg = (y_tr == 0).sum()
+pos_weight = None
+if pos > 0 and neg > 0:
+    pos_weight = torch.tensor([neg / max(pos, 1)], dtype=torch.float32, device=DEVICE)
+
+# -----------------------
+# Evaluation helper
+# -----------------------
+@torch.no_grad()
+def evaluate(model: nn.Module, loader: DataLoader):
+    model.eval()
+    all_logits, all_true = [], []
+    for xb, yb in loader:
+        xb = xb.to(DEVICE); yb = yb.to(DEVICE)
+        logits = model(xb)
+        all_logits.append(logits.cpu().numpy())
+        all_true.append(yb.cpu().numpy())
+    logits = np.concatenate(all_logits)
+    probs  = 1.0 / (1.0 + np.exp(-logits))
+    preds  = (probs >= 0.5).astype(int)
+    y_true = np.concatenate(all_true).astype(int)
+    return {
+        "acc":  accuracy_score(y_true, preds),
+        "bacc": balanced_accuracy_score(y_true, preds),
+        "f1m":  f1_score(y_true, preds, average="macro"),
+        "y_true": y_true, "preds": preds, "probs": probs
+    }
+
+# -----------------------
+# Train one config with early stopping on val balanced accuracy
+# -----------------------
+def train_once(hidden=(128,64,32), dropout=0.15, lr=1e-3, weight_decay=1e-4,
+               batch_size=256, max_epochs=120, patience=15):
+    train_loader, val_loader, _ = make_loaders(batch_size)
+    model = MLP(in_dim=X_tr.shape[1], hidden=hidden, dropout=dropout).to(DEVICE)
+    opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight) if pos_weight is not None else nn.BCEWithLogitsLoss()
+
+    best_bacc = -1.0
+    best_state = None
+    wait = patience
+
+    for epoch in range(1, max_epochs + 1):
+        model.train()
+        for xb, yb in train_loader:
+            xb = xb.to(DEVICE); yb = yb.to(DEVICE)
+            logits = model(xb)
+            loss = criterion(logits, yb)
+            opt.zero_grad(); loss.backward(); opt.step()
+
+        val = evaluate(model, val_loader)
+        print(f"Epoch {epoch:03d}/{max_epochs} | val_bacc={val['bacc']:.4f}  val_f1m={val['f1m']:.4f}  val_acc={val['acc']:.4f}")
+
+        if val["bacc"] > best_bacc + 1e-5:
+            best_bacc = val["bacc"]
+            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+            wait = patience
+        else:
+            wait -= 1
+            if wait <= 0:
+                print("Early stopping.")
+                break
+
+    if best_state is not None:
+        model.load_state_dict(best_state)
+    return model, best_bacc
+
+# -----------------------
+# Tiny hyperparam sweep (fast)
+# -----------------------
+candidates = [
+    dict(hidden=(128,64,32), dropout=0.15, lr=1e-3,  weight_decay=1e-4, batch_size=256, max_epochs=120, patience=15),
+    dict(hidden=(256,128,64),dropout=0.20, lr=8e-4,  weight_decay=3e-4, batch_size=256, max_epochs=120, patience=15),
+    dict(hidden=(96,48,24),  dropout=0.10, lr=1.5e-3,weight_decay=5e-5, batch_size=256, max_epochs=150, patience=20),
+]
+
+best_model, best_cfg, best_bacc = None, None, -1.0
+for cfg in candidates:
+    print("\n=== Trying config:", cfg, "===")
+    m, bacc = train_once(**cfg)
+    if bacc > best_bacc:
+        best_bacc, best_model, best_cfg = bacc, m, cfg
+
+print(f"\nBest VAL balanced accuracy: {best_bacc:.4f}  with {best_cfg}")
+
+# -----------------------
+# Final test evaluation
+# -----------------------
+_, _, test_loader = make_loaders(best_cfg["batch_size"])
+test = evaluate(best_model, test_loader)
+print("\n=== TEST METRICS ===")
+print(f"Accuracy:         {test['acc']:.4f}")
+print(f"Balanced Acc:     {test['bacc']:.4f}")
+print(f"F1-macro:         {test['f1m']:.4f}")
+print(classification_report(test["y_true"], test["preds"], digits=3))
+print("Confusion matrix:\n", confusion_matrix(test["y_true"], test["preds"]))
+
+# -----------------------
+# Save artifacts (model + meta + scaler)
+# -----------------------
+torch.save(best_model.state_dict(), MODEL_PATH)
+with open(META_PATH, "w") as f:
+    json.dump({
+        "features": diff_features,
+        "input_dim": X_tr.shape[1],
+        "hidden": list(best_cfg["hidden"]),
+        "dropout": float(best_cfg["dropout"]),
+        "threshold": 0.5,                 # you can tune this later on val set
+        "label_name": "winner_binary",
+        "device_trained": DEVICE,
+        "scaler": os.path.basename(SCALER_PATH)
+    }, f, indent=2)
+print(f"\nSaved:\n  {MODEL_PATH}\n  {SCALER_PATH}\n  {META_PATH}")
+
+# -----------------------
+# Inference helper: pass your usual X_input (1-row diff DataFrame)
+# -----------------------
+class _InferMLP(nn.Module):
+    def __init__(self, in_dim, hidden, dropout):
+        super().__init__()
+        layers, prev = [], in_dim
+        for h in hidden:
+            layers += [nn.Linear(prev, h), nn.BatchNorm1d(h), nn.ReLU(), nn.Dropout(dropout)]
+            prev = h
+        layers += [nn.Linear(prev, 1)]
+        self.net = nn.Sequential(*layers)
+    def forward(self, x): return self.net(x).squeeze(1)
+
+def predict_proba_torch(X_input_df: pd.DataFrame) -> np.ndarray:
+    """
+    X_input_df: DataFrame with exactly the columns in `diff_features` (same order enforced below).
+    Returns: np.ndarray of shape (N,) with Prob(Red/Fighter1 wins).
+    """
+    # load artifacts
+    with open(META_PATH, "r") as f:
+        meta = json.load(f)
+    scaler = joblib.load(SCALER_PATH)
+    state  = torch.load(MODEL_PATH, map_location=DEVICE)
+
+    # enforce column order & transform
+    X = X_input_df[meta["features"]].astype(float).values
+    X = scaler.transform(X)
+    xb = torch.tensor(X, dtype=torch.float32, device=DEVICE)
+
+    # build model & predict
+    model = _InferMLP(meta["input_dim"], tuple(meta["hidden"]), meta["dropout"])
+    model.load_state_dict(state); model.to(DEVICE); model.eval()
+    with torch.no_grad():
+        probs = torch.sigmoid(model(xb)).cpu().numpy()
+    return probs
+
+# Save artifacts for custom-inputs.py
+torch.save(best_model.state_dict(), "torch_mlp_model.pt")
+joblib.dump(scaler, "torch_mlp_scaler.pkl")
+with open("torch_mlp_meta.json", "w") as f:
+    json.dump({
+        "features": diff_features,
+        "input_dim": X_tr.shape[1],
+        "hidden": list(best_cfg["hidden"]),
+        "dropout": float(best_cfg["dropout"]),
+        "threshold": 0.5
+    }, f, indent=2)
+
+print("\nExported PyTorch model for custom-inputs.py:")
+print(" - torch_mlp_model.pt")
+print(" - torch_mlp_scaler.pkl")
+print(" - torch_mlp_meta.json")
+

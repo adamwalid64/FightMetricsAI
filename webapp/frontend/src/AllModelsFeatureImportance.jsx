@@ -17,7 +17,8 @@ function AllModelsFeatureImportance() {
   const [chartData, setChartData] = useState({
     xgboost: { features: [], scores: [] },
     logistic_regression: { features: [], scores: [] },
-    catboost: { features: [], scores: [] }
+    catboost: { features: [], scores: [] },
+    mlp: { features: [], scores: [] }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,7 +36,8 @@ function AllModelsFeatureImportance() {
           setChartData({
             xgboost: data.xgboost || { features: [], scores: [] },
             logistic_regression: data.logistic_regression || { features: [], scores: [] },
-            catboost: data.catboost || { features: [], scores: [] }
+            catboost: data.catboost || { features: [], scores: [] },
+            mlp: data.mlp || { features: [], scores: [] }
           });
           setError(null);
         } else {
@@ -123,7 +125,8 @@ function AllModelsFeatureImportance() {
   const models = [
     { key: 'logistic_regression', name: 'Logistic Regression', color: 'rgba(40, 167, 69, 0.6)' },
     { key: 'xgboost', name: 'XGBoost', color: 'rgba(0, 123, 255, 0.6)' },
-    { key: 'catboost', name: 'CatBoost', color: 'rgba(255, 193, 7, 0.6)' }
+    { key: 'catboost', name: 'CatBoost', color: 'rgba(255, 193, 7, 0.6)' },
+    { key: 'mlp', name: 'MLP', color: 'rgba(108, 92, 231, 0.6)' }
   ];
 
   const goToSlide = (index) => {
@@ -181,6 +184,7 @@ function AllModelsFeatureImportance() {
                 onClick={() => goToSlide(index)}
                 disabled={isTransitioning}
                 aria-label={`Go to ${model.name} chart`}
+                data-model={model.key}
                 style={{
                   '--model-color': model.color,
                   '--model-color-solid': model.color.replace('0.6', '1')

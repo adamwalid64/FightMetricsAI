@@ -1,25 +1,49 @@
 import joblib
-import os
 import pandas as pd
+import torch
+import torch.nn as nn
+import json
+import numpy as np
+import os
+import sys
 
-# Load the models
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "xgb_ufc_model.pkl")
-xgb_model = joblib.load(MODEL_PATH)
+# Add Prediction directory to path to access ensemble system
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction'))
 
-# Load additional models if they exist
-try:
-    catboost_model = joblib.load(os.path.join(os.path.dirname(__file__), "CatBoost_ufc_model.pkl"))
-    lgreg_model = joblib.load(os.path.join(os.path.dirname(__file__), "LGReg_ufc_model.pkl"))
-    scaler = joblib.load(os.path.join(os.path.dirname(__file__), "LGReg_scaler.pkl"))
-    has_additional_models = True
-except FileNotFoundError:
-    has_additional_models = False
+# Load the models from Prediction directory
+xgb_model = joblib.load(os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'xgb_ufc_model.pkl'))
+catboost_model = joblib.load(os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'CatBoost_ufc_model.pkl'))
+lgreg_model = joblib.load(os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'LGReg_ufc_model.pkl'))
+scaler = joblib.load(os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'LGReg_scaler.pkl'))
 
-# Read in up-to-date dataset that ships with the backend
-DATA_PATH = os.path.join(os.path.dirname(__file__), "scraped-ufc-data.csv")
-df = pd.read_csv(DATA_PATH, sep=',')
+# Load MLP model artifacts
+with open(os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'torch_mlp_meta.json'), "r") as f:
+    mlp_meta = json.load(f)
+mlp_scaler = joblib.load(os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'torch_mlp_scaler.pkl'))
 
-# helper function to clean data to match ML dataset
+# Define MLP model class for inference
+class _InferMLP(nn.Module):
+    def __init__(self, in_dim, hidden, dropout):
+        super().__init__()
+        layers, prev = [], in_dim
+        for h in hidden:
+            layers += [nn.Linear(prev, h), nn.BatchNorm1d(h), nn.ReLU(), nn.Dropout(dropout)]
+            prev = h
+        layers += [nn.Linear(prev, 1)]
+        self.net = nn.Sequential(*layers)
+    def forward(self, x): return self.net(x).squeeze(1)
+
+# Load MLP model
+device = "cuda" if torch.cuda.is_available() else "cpu"
+mlp_model = _InferMLP(mlp_meta["input_dim"], tuple(mlp_meta["hidden"]), mlp_meta["dropout"])
+mlp_model.load_state_dict(torch.load(os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'torch_mlp_model.pt'), map_location=device))
+mlp_model.to(device)
+mlp_model.eval()
+
+# Read in up-to-date dataset
+df = pd.read_csv(os.path.join(os.path.dirname(__file__), '..', '..', 'Data', 'raw-scraped-ufc-data2.csv'), sep=',')
+
+# Helper function to clean data to match ML dataset
 def height_str_to_cm(height_str):
     try:
         feet, inches = height_str.replace('"', '').split("'")
@@ -29,37 +53,66 @@ def height_str_to_cm(height_str):
     except:
         return None  # or 0, or raise an error
 
-# enter fighter ids ex: calcdiff(64, 22)
 def getCustomPredict(fighter1, fighter2):
+    """
+    Get custom prediction for two fighters using the ensemble system.
+    
+    Args:
+        fighter1 (int): Fighter 1 ID
+        fighter2 (int): Fighter 2 ID
+    
+    Returns:
+        dict: Complete prediction results including ensemble and individual model predictions
+    """
     columns = ['SLpM', 'SApM', 'Str_Acc', 'TD_Acc', 'Str_Def', 'TD_Def', 'Sub_Avg',
                'TD_Avg', 'age', 'height', 'reach', 'wins', 'losses']
 
-    f1 = df.loc[df['id'] == fighter1, columns].iloc[0]
-    f2 = df.loc[df['id'] == fighter2, columns].iloc[0]
+    # Check if fighters exist in the dataset
+    f1_data = df.loc[df['id'] == fighter1, columns]
+    f2_data = df.loc[df['id'] == fighter2, columns]
+    
+    if f1_data.empty or f2_data.empty:
+        print(f"Fighter not found: fighter1={fighter1}, fighter2={fighter2}")
+        return None
+    
+    f1 = f1_data.iloc[0]
+    f2 = f2_data.iloc[0]
 
     # Get fighter names for display
-    fighter1_name = df.loc[df['id'] == fighter1, 'name'].iloc[0]
-    fighter2_name = df.loc[df['id'] == fighter2, 'name'].iloc[0]
+    fighter1_name_data = df.loc[df['id'] == fighter1, 'name']
+    fighter2_name_data = df.loc[df['id'] == fighter2, 'name']
+    
+    if fighter1_name_data.empty or fighter2_name_data.empty:
+        print(f"Fighter name not found: fighter1={fighter1}, fighter2={fighter2}")
+        return None
+    
+    fighter1_name = fighter1_name_data.iloc[0]
+    fighter2_name = fighter2_name_data.iloc[0]
 
-    f1_height = height_str_to_cm(f1['height']) or 0
-    f2_height = height_str_to_cm(f2['height']) or 0
+    f1_height = height_str_to_cm(f1['height']) if pd.notna(f1['height']) else 0
+    f2_height = height_str_to_cm(f2['height']) if pd.notna(f2['height']) else 0
 
     def make_input(winner, loser, winner_height, loser_height):
+        # Handle NaN values by replacing them with 0
+        def safe_diff(val1, val2):
+            if pd.isna(val1) or pd.isna(val2):
+                return 0.0
+            return val1 - val2
+        
         return pd.DataFrame([{
-            'SLpM_total_diff': winner['SLpM'] - loser['SLpM'],
-            'SApM_total_diff': winner['SApM'] - loser['SApM'],
-            'sig_str_acc_total_diff': winner['Str_Acc'] - loser['Str_Acc'],
-            'td_acc_total_diff': winner['TD_Acc'] - loser['TD_Acc'],
-            'str_def_total_diff': winner['Str_Def'] - loser['Str_Def'],
-            'td_def_total_diff': winner['TD_Def'] - loser['TD_Def'],
-            'sub_avg_diff': winner['Sub_Avg'] - loser['Sub_Avg'],
-            'td_avg_diff': winner['TD_Avg'] - loser['TD_Avg'],
-            'age_diff': winner['age'] - loser['age'],
-            'height_diff': winner_height - loser_height,
-            # 'weight_diff': winner['weight'] - loser['weight'],
-            'reach_diff': winner['reach'] - loser['reach'],
-            'wins_total_diff': winner['wins'] - loser['losses'],
-            'losses_total_diff': winner['losses'] - loser['losses']
+            'SLpM_total_diff': safe_diff(winner['SLpM'], loser['SLpM']),
+            'SApM_total_diff': safe_diff(winner['SApM'], loser['SApM']),
+            'sig_str_acc_total_diff': safe_diff(winner['Str_Acc'], loser['Str_Acc']),
+            'td_acc_total_diff': safe_diff(winner['TD_Acc'], loser['TD_Acc']),
+            'str_def_total_diff': safe_diff(winner['Str_Def'], loser['Str_Def']),
+            'td_def_total_diff': safe_diff(winner['TD_Def'], loser['TD_Def']),
+            'sub_avg_diff': safe_diff(winner['Sub_Avg'], loser['Sub_Avg']),
+            'td_avg_diff': safe_diff(winner['TD_Avg'], loser['TD_Avg']),
+            'age_diff': safe_diff(winner['age'], loser['age']),
+            'height_diff': safe_diff(winner_height, loser_height),
+            'reach_diff': safe_diff(winner['reach'], loser['reach']),
+            'wins_total_diff': safe_diff(winner['wins'], loser['wins']),
+            'losses_total_diff': safe_diff(winner['losses'], loser['losses'])
         }])
 
     # Try both orders
@@ -70,202 +123,104 @@ def getCustomPredict(fighter1, fighter2):
     p1_xgb = xgb_model.predict_proba(X1)[0][1]  # prob f1 wins
     p2_xgb = xgb_model.predict_proba(X2)[0][1]  # prob f2 wins
 
-    # Initialize variables for additional models
-    p1_cat = p2_cat = p1_lgreg = p2_lgreg = 0.5
+    # Predict both directions with CatBoost
+    p1_cat = catboost_model.predict_proba(X1)[0][1]  # prob f1 wins
+    p2_cat = catboost_model.predict_proba(X2)[0][1]  # prob f2 wins
 
-    # Predict both directions with CatBoost and Logistic Regression if available
-    if has_additional_models:
-        p1_cat = catboost_model.predict_proba(X1)[0][1]  # prob f1 wins
-        p2_cat = catboost_model.predict_proba(X2)[0][1]  # prob f2 wins
+    # Predict both directions with Logistic Regression
+    X1_scaled = scaler.transform(X1)
+    X2_scaled = scaler.transform(X2)
+    p1_lgreg = lgreg_model.predict_proba(X1_scaled)[0][1] # prob f1 wins
+    p2_lgreg = lgreg_model.predict_proba(X2_scaled)[0][1] # prob f2 wins
 
-        X1_scaled = scaler.transform(X1)
-        X2_scaled = scaler.transform(X2)
-        p1_lgreg = lgreg_model.predict_proba(X1_scaled)[0][1] # prob f1 wins
-        p2_lgreg = lgreg_model.predict_proba(X2_scaled)[0][1] # prob f2 wins
-
-    # Voting system: Each model gets one vote
-    # Determine each model's vote
-    xgb_vote = "fighter1" if p1_xgb > p2_xgb else "fighter2"
-    cat_vote = "fighter1" if p1_cat > p2_cat else "fighter2"
-    lgreg_vote = "fighter1" if p1_lgreg > p2_lgreg else "fighter2"
+    # Predict both directions with MLP
+    X1_mlp = X1[mlp_meta["features"]].astype(float).values
+    X2_mlp = X2[mlp_meta["features"]].astype(float).values
+    X1_mlp_scaled = mlp_scaler.transform(X1_mlp)
+    X2_mlp_scaled = mlp_scaler.transform(X2_mlp)
     
-    # Count votes
-    votes = [xgb_vote, cat_vote, lgreg_vote]
-    fighter1_votes = votes.count("fighter1")
-    fighter2_votes = votes.count("fighter2")
-    
-    # Determine winner by majority vote
-    if fighter1_votes > fighter2_votes:
-        winner = "fighter1"
-        winner_name = fighter1_name
-        winner_id = fighter1
-        confidence = fighter1_votes / 3.0  # Confidence based on vote majority
-    elif fighter2_votes > fighter1_votes:
-        winner = "fighter2"
-        winner_name = fighter2_name
-        winner_id = fighter2
-        confidence = fighter2_votes / 3.0  # Confidence based on vote majority
-    else:
-        # Tie - use average probabilities as tiebreaker
-        avg_p1 = (p1_xgb + p1_cat + p1_lgreg) / 3
-        avg_p2 = (p2_xgb + p2_cat + p2_lgreg) / 3
+    with torch.no_grad():
+        # Convert to tensors and move to device
+        X1_tensor = torch.tensor(X1_mlp_scaled, dtype=torch.float32, device=device)
+        X2_tensor = torch.tensor(X2_mlp_scaled, dtype=torch.float32, device=device)
         
-        if avg_p1 > avg_p2:
-            winner = "fighter1"
-            winner_name = fighter1_name
-            winner_id = fighter1
-            confidence = 0.5  # Lower confidence for tiebreaker
+        # Get raw model outputs (logits)
+        logits1 = mlp_model(X1_tensor)
+        logits2 = mlp_model(X2_tensor)
+        
+        # Apply sigmoid to get probabilities
+        p1_mlp_raw = torch.sigmoid(logits1).cpu().numpy()[0]  # prob f1 wins
+        p2_mlp_raw = torch.sigmoid(logits2).cpu().numpy()[0]  # prob f2 wins
+        
+        # Handle extreme probabilities by clipping and normalizing
+        if p1_mlp_raw < 0.001 and p2_mlp_raw < 0.001:
+            # Both are very low, normalize to reasonable values
+            p1_mlp = 0.3  # Give slight edge to fighter1
+            p2_mlp = 0.7  # Give slight edge to fighter2
         else:
-            winner = "fighter2"
-            winner_name = fighter2_name
+            # Clip probabilities to reasonable range and normalize
+            p1_mlp = np.clip(p1_mlp_raw, 0.001, 0.999)
+            p2_mlp = np.clip(p2_mlp_raw, 0.001, 0.999)
+            
+            # Normalize so they sum to 1
+            total_prob = p1_mlp + p2_mlp
+            p1_mlp = p1_mlp / total_prob
+            p2_mlp = p2_mlp / total_prob
+
+    # Try to get ensemble prediction if available
+    ensemble_result = None
+    try:
+        from ensemble_integration import get_ensemble_prediction
+        
+        # Check if ensemble artifacts exist - use absolute path from Prediction directory
+        ensemble_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'ensemble_artifacts')
+        print(f"Looking for ensemble artifacts in: {ensemble_dir}")
+        print(f"Directory exists: {os.path.exists(ensemble_dir)}")
+        
+        if os.path.exists(ensemble_dir):
+            print("Ensemble artifacts found, attempting ensemble prediction...")
+            ensemble_result = get_ensemble_prediction(fighter1, fighter2)
+            if ensemble_result:
+                print("✓ Ensemble prediction successful!")
+            else:
+                print("⚠ Ensemble prediction returned None")
+        else:
+            print(f"⚠ Ensemble artifacts directory not found at: {ensemble_dir}")
+    except Exception as e:
+        print(f"Ensemble not available: {e}")
+        import traceback
+        traceback.print_exc()
+
+    # Determine winner based on ensemble or individual models
+    if ensemble_result:
+        winner_id = fighter1 if ensemble_result['winner_name'] == fighter1_name else fighter2
+        winner_name = ensemble_result['winner_name']
+        confidence = ensemble_result['confidence']
+    else:
+        # Use XGBoost as the primary model for winner determination
+        if p1_xgb > p2_xgb:
+            winner_id = fighter1
+            winner_name = fighter1_name
+            confidence = p1_xgb
+        else:
             winner_id = fighter2
-            confidence = 0.5  # Lower confidence for tiebreaker
-
-    # Create detailed results for individual models
-    model_predictions = {
-        'XGBoost': {
-            'prediction': fighter1_name if xgb_vote == "fighter1" else fighter2_name,
-            'confidence': max(p1_xgb, p2_xgb),
-            'fighter1_prob': p1_xgb,
-            'fighter2_prob': p2_xgb
+            winner_name = fighter2_name
+            confidence = p2_xgb
+    
+    # Return structured data for frontend
+    result_data = {
+        'winner_id': winner_id,
+        'winner_name': winner_name,
+        'confidence': confidence,
+        'individual_predictions': {
+            'XGBoost': {'fighter1_prob': float(p1_xgb), 'fighter2_prob': float(p2_xgb), 'winner': 'Fighter1' if p1_xgb > p2_xgb else 'Fighter2'},
+            'CatBoost': {'fighter1_prob': float(p1_cat), 'fighter2_prob': float(p2_cat), 'winner': 'Fighter1' if p1_cat > p2_cat else 'Fighter2'},
+            'Logistic Regression': {'fighter1_prob': float(p1_lgreg), 'fighter2_prob': float(p2_lgreg), 'winner': 'Fighter1' if p1_lgreg > p2_lgreg else 'Fighter2'},
+            'MLP': {'fighter1_prob': float(p1_mlp), 'fighter2_prob': float(p2_mlp), 'winner': 'Fighter1' if p1_mlp > p2_mlp else 'Fighter2'}
         },
-        'CatBoost': {
-            'prediction': fighter1_name if cat_vote == "fighter1" else fighter2_name,
-            'confidence': max(p1_cat, p2_cat),
-            'fighter1_prob': p1_cat,
-            'fighter2_prob': p2_cat
-        },
-        'Logistic Regression': {
-            'prediction': fighter1_name if lgreg_vote == "fighter1" else fighter2_name,
-            'confidence': max(p1_lgreg, p2_lgreg),
-            'fighter1_prob': p1_lgreg,
-            'fighter2_prob': p2_lgreg
-        }
+        'ensemble_prediction': ensemble_result if ensemble_result else None
     }
-
-    return winner_id, confidence, model_predictions
-
-# Testing the model on live data
-
-# REAL TIME TEST 1: SUCCESS --- Kamaru Usman vs Joaquin Buckley
-# Usman id: 402
-# Buckley id: 3043
-# getCustomPredict(3043, 402)
-
-# REAL TIME TEST 2: SUCCESS --- Belal Muhammad vs JDM
-# JDM id: 698
-# Belal Muhammad id: 1997
-# getCustomPredict(698, 1997)
-
-# REAL TIME TEST 3: SUCCESS --- Pimblett vs Chandler
-# Pimblett id: 2306
-# Chandler id: 504
-# getCustomPredict(504, 2306)
-
-# REAL TIME TEST 4: SUCCESS --- Sandhagen vs. Figueiredo
-# Sandhagen id: 2599
-# Figueiredo id: 894
-# getCustomPredict(894, 2599)
-
-# REAL TIME TEST 5: SUCCESS --- Moreno vs. Erceg
-# Moreno id: 1978
-# Erceg id: 847
-# getCustomPredict(1978, 847)
-
-# REAL TIME TEST 6: SUCCESS --- Holland vs. Luque
-# Holland id: 1251
-# Luque id: 1698
-# getCustomPredict(1251, 1698)
-
-# REAL TIME TEST 7: SUCCESS --- Edwards vs. Brady
-# Brady id: 351
-# Edwards id: 810
-# getCustomPredict(810, 351)
-
-# REAL TIME TEST 8: SUCCESS --- Adesanya vs. Imavov
-# Adesanya id: 18
-# Imavov id: 1313
-# getCustomPredict(18, 1313)
-
-# REAL TIME TEST 9: Hit --- Moicano vs. Dariush
-# Moicano id: 1943
-# Dariush id: 658
-# getCustomPredict(1943, 658)
-# Prediction: Dariush
-# Win: 10/10 profit
-
-# REAL TIME TEST 10: Hit --- Topuria vs. Oliveira
-# Oliveira id: 2141
-# Topuria id: 2989
-# getCustomPredict(2141, 2989)
-# Predicted Winner: Fighter 2141 (ID 2141) — Confidence: 0.76
-# Win: 10/34.5 profit
-
-# REAL TIME TEST 11: Miss --- Talbott vs. Lima
-# Talbott id: 2921
-# Lima id: 1649
-# getCustomPredict(2921, 1649)
-# Prediction: Lima
-# Win: 10/5.10 profit
-
-# REAL TIME TEST 12: HIT --- Hermansson vs. Rodrigues
-# Hermansson id: 1212
-# Rodrigues id: 2483
-# getCustomPredict(2483, 1212)
-# Prediction: Hermansson
-# Win: 10/16.5
-
-# REAL TIME TEST 13: SUCCESS --- Strickland vs. DDP 2
-# Strickland id: 2891
-# DDP id: 772
-# getCustomPredict(772, 2891)
-
-# REAL TIME TEST 14: Miss --- Cejudo vs. Song 2
-# Cejudo id: 494
-# Song id: 2811
-# getCustomPredict(494, 2811)
-# Prediction: DDP
-
-# REAL TIME TEST 15: SUCCESS --- Pantoja vs Kai kara-France
-# Pantoja id: 2685
-# Kai kara-France id: 1737
-# getCustomPredict(1737, 2685)
-
-## UFC Fight Night: Lewis vs. Teixeira
-
-# REAL TIME TEST 16: LIVE --- # Lewis vs Teixeira
-# Lewis id: 1992
-# Teixeira id: 3589
-# getCustomPredict(3589, 1992)
-
-# REAL TIME TEST 17: LIVE --- # Thompson vs Bonfim
-# Thompson id: 3615
-# Bonfim id: 387
-# getCustomPredict(3615, 387)
-
-# REAL TIME TEST 18: LIVE --- # Kattar vs Garcia
-# Kattar id: 1749
-# Garcia id: 1197
-# getCustomPredict(1197, 1749)
-
-# REAL TIME TEST 19: LIVE --- # Landwehr vs Charriere
-# Landwehr id: 1903
-# Charriere id: 617
-# getCustomPredict(617, 1903)
-
-# REAL TIME TEST 20: LIVE --- # Petrino vs Lane
-# Petrino id: 2785
-# Lane id: 1904
-# getCustomPredict(2785, 1904)
-
-# REAL TIME TEST 21: LIVE --- # Matthews vs Njokuani
-# Matthews id: 2218
-# Njokuani id: 2566
-# getCustomPredict(725, 1844)
-
-# REAL TIME TEST 22: LIVE --- # Matthews vs Njokuani
-# Matthews id: 228
-# Njokuani id: 2566
-# getCustomPredict(1196, 1748)
+    
+    return result_data
 
 

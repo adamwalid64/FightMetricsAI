@@ -3,6 +3,10 @@ import './RAGPipeline.css';
 import redroboNews from '../img/redrobo-news.png';
 import blueroboNews from '../img/bluerobo-news.png';
 import scrapeGif from '../img/scrape_gif.webm';
+import twitterIcon from '../img/media_icons/twitter.svg';
+import redditIcon from '../img/media_icons/reddit.svg';
+import tiktokIcon from '../img/media_icons/tik-tok.svg';
+import yahooIcon from '../img/media_icons/yahoo.svg';
 
 function RAGPipeline() {
   const [response, setResponse] = useState('');
@@ -146,6 +150,16 @@ function RAGPipeline() {
           <button type="submit" disabled={!fighter1.trim() || !fighter2.trim()}>
             Analyze
           </button>
+        )}
+        
+        {/* RAG Analysis Result - positioned right after analyze button */}
+        {response && !loading && (
+          <div className="rag-response">
+            <h4>Analysis Result:</h4>
+            <div className="response-content">
+              {response}
+            </div>
+          </div>
         )}
         
                  <datalist id="fighter-options-rag">
@@ -319,15 +333,6 @@ function RAGPipeline() {
                       </p>
                     </div>
                   </div>
-
-       {response && (
-         <div className="rag-response">
-           <h4>Analysis Result:</h4>
-           <div className="response-content">
-             {response}
-           </div>
-         </div>
-       )}
     </div>
   );
 }

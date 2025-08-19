@@ -69,39 +69,81 @@ def predict():
     print('Fighter One:', fighter_one)
     print('Fighter Two:', fighter_two)
 
-
     fighter_one_id = get_fighter_id(fighter_one, df)
     fighter_two_id = get_fighter_id(fighter_two, df)
 
     print('Fighter One ID:', fighter_one_id)
     print('Fighter Two ID:', fighter_two_id)
 
-    result = prediction_custom_inputs.getCustomPredict(fighter_one_id, fighter_two_id)
-    
-    if result is None:
-        return jsonify({'error': 'Unable to determine winner'}), 400
-    
-    winner_id, confidence, model_predictions = result
-    winner_row = df[df['id'] == winner_id]
-    winner_name = winner_row['name'].iloc[0] if not winner_row.empty else str(winner_id)
+    if fighter_one_id is None or fighter_two_id is None:
+        return jsonify({'error': 'One or both fighters not found in database'}), 400
 
-    print('Winner ID: ' + str(winner_id))
-    print('Winner Name: ' + str(winner_name))
-    print('Confidence: ' + str(confidence))
+    try:
+        # Use the new ensemble prediction system
+        result = prediction_custom_inputs.getCustomPredict(fighter_one_id, fighter_two_id)
+        
+        if result is None:
+            return jsonify({'error': 'Unable to determine winner'}), 400
+        
+        # Extract data from the new ensemble result structure
+        winner_id = result['winner_id']
+        winner_name = result['winner_name']
+        confidence = result['confidence']
+        individual_predictions = result['individual_predictions']
+        ensemble_prediction = result['ensemble_prediction']
+        
+        print('Winner ID: ' + str(winner_id))
+        print('Winner Name: ' + str(winner_name))
+        print('Confidence: ' + str(confidence))
+        print('Ensemble Available: ' + str(ensemble_prediction is not None))
 
-    # Count how many models predicted each fighter
-    fighter1_votes = sum(1 for model in model_predictions.values() if model['prediction'] == fighter_one)
-    fighter2_votes = sum(1 for model in model_predictions.values() if model['prediction'] == fighter_two)
+        # Format individual model predictions for frontend
+        formatted_predictions = {}
+        for model_name, model_data in individual_predictions.items():
+            # Determine winner for each model
+            if model_data['fighter1_prob'] > model_data['fighter2_prob']:
+                predicted_winner = fighter_one
+                predicted_winner_prob = model_data['fighter1_prob']
+            else:
+                predicted_winner = fighter_two
+                predicted_winner_prob = model_data['fighter2_prob']
+            
+            formatted_predictions[model_name] = {
+                'fighter1_prob': model_data['fighter1_prob'],
+                'fighter2_prob': model_data['fighter2_prob'],
+                'prediction': predicted_winner,
+                'confidence': predicted_winner_prob
+            }
 
-    return jsonify({
-        'prediction': winner_name, 
-        'confidence': confidence,
-        'model_predictions': model_predictions,
-        'fighter1_votes': fighter1_votes,
-        'fighter2_votes': fighter2_votes,
-        'fighter1_name': fighter_one,
-        'fighter2_name': fighter_two
-    })
+        # Count how many models predicted each fighter
+        fighter1_votes = sum(1 for model in formatted_predictions.values() if model['prediction'] == fighter_one)
+        fighter2_votes = sum(1 for model in formatted_predictions.values() if model['prediction'] == fighter_two)
+
+        # Prepare ensemble data if available
+        ensemble_data = None
+        if ensemble_prediction:
+            ensemble_data = {
+                'winner_name': ensemble_prediction['winner_name'],
+                'ensemble_probability': ensemble_prediction['ensemble_probability'],
+                'confidence': ensemble_prediction['confidence'],
+                'base_predictions': ensemble_prediction['base_predictions']
+            }
+
+        return jsonify({
+            'prediction': winner_name, 
+            'confidence': confidence,
+            'model_predictions': formatted_predictions,
+            'fighter1_votes': fighter1_votes,
+            'fighter2_votes': fighter2_votes,
+            'fighter1_name': fighter_one,
+            'fighter2_name': fighter_two,
+            'ensemble_prediction': ensemble_data,
+            'winner_id': winner_id
+        })
+        
+    except Exception as e:
+        print(f"Error in prediction: {e}")
+        return jsonify({'error': f'Prediction error: {str(e)}'}), 500
 
 
 @app.route('/feature-importance', methods=['GET'])
@@ -333,6 +375,81 @@ def feature_importance_catboost():
             print(f"CatBoost alternative approach also failed: {e2}")
         return jsonify({'error': 'Unable to load CatBoost feature importance'}), 500
 
+@app.route('/feature-importance/mlp', methods=['GET'])
+def feature_importance_mlp():
+    """Get feature importance for MLP model using weight-based attribution"""
+    try:
+        import torch
+        import torch.nn as nn
+        import numpy as np
+        
+        # Load MLP model and metadata
+        mlp_meta_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'torch_mlp_meta.json')
+        mlp_model_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'torch_mlp_model.pt')
+        
+        if not all(os.path.exists(p) for p in [mlp_meta_path, mlp_model_path]):
+            return jsonify({'error': 'MLP model files not found'}), 404
+        
+        # Load MLP components
+        with open(mlp_meta_path, "r") as f:
+            mlp_meta = json.load(f)
+        
+        # Define MLP model class for inference (matching custom_inputs.py)
+        class _InferMLP(nn.Module):
+            def __init__(self, in_dim, hidden, dropout):
+                super().__init__()
+                layers, prev = [], in_dim
+                for h in hidden:
+                    layers += [nn.Linear(prev, h), nn.BatchNorm1d(h), nn.ReLU(), nn.Dropout(dropout)]
+                    prev = h
+                layers += [nn.Linear(prev, 1)]
+                self.net = nn.Sequential(*layers)
+            
+            def forward(self, x): 
+                return self.net(x).squeeze(1)
+        
+        # Load MLP model
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        mlp_model = _InferMLP(mlp_meta["input_dim"], tuple(mlp_meta["hidden"]), mlp_meta["dropout"])
+        mlp_model.load_state_dict(torch.load(mlp_model_path, map_location=device))
+        mlp_model.to(device)
+        mlp_model.eval()
+        
+        # Get feature names from metadata
+        features = mlp_meta.get("features", [
+            'SLpM_total_diff', 'SApM_total_diff', 'sig_str_acc_total_diff',
+            'td_acc_total_diff', 'str_def_total_diff', 'td_def_total_diff',
+            'sub_avg_diff', 'td_avg_diff', 'age_diff', 'height_diff', 
+            'reach_diff', 'wins_total_diff', 'losses_total_diff'
+        ])
+        
+        # Calculate feature importance using weight-based attribution
+        # Get the first layer weights (input to first hidden layer)
+        # The first layer is at index 0 in the Sequential
+        first_layer = mlp_model.net[0]  # First Linear layer
+        weights = first_layer.weight.data.cpu().numpy()
+        
+        # Calculate importance as the average absolute weight for each input feature
+        # across all hidden neurons in the first layer
+        importance_scores = np.mean(np.abs(weights), axis=0)
+        
+        # Normalize to sum to 1
+        importance_scores = importance_scores / (importance_scores.sum() + 1e-8)
+        
+        # Convert to list and ensure they're JSON serializable
+        scores = [float(score) for score in importance_scores]
+        
+        return jsonify({
+            'features': features,
+            'scores': scores
+        })
+        
+    except Exception as e:
+        print(f"Error loading MLP feature importance: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Unable to load MLP feature importance: {str(e)}'}), 500
+
 def extract_data_from_response(response):
     """Helper function to extract JSON data from Flask response objects"""
     try:
@@ -346,7 +463,7 @@ def extract_data_from_response(response):
 
 @app.route('/feature-importance/all', methods=['GET'])
 def feature_importance_all():
-    """Get feature importance for all three models"""
+    """Get feature importance for all four models"""
     try:
         # Call the individual endpoint functions directly
         results = {}
@@ -374,6 +491,14 @@ def feature_importance_all():
         except Exception as e:
             print(f"Error loading CatBoost feature importance: {e}")
             results['catboost'] = {'error': 'Unable to load CatBoost feature importance'}
+        
+        # MLP
+        try:
+            mlp_response = feature_importance_mlp()
+            results['mlp'] = extract_data_from_response(mlp_response)
+        except Exception as e:
+            print(f"Error loading MLP feature importance: {e}")
+            results['mlp'] = {'error': 'Unable to load MLP feature importance'}
         
         return jsonify(results)
         

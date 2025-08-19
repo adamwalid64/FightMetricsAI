@@ -334,13 +334,16 @@
   border: 1px solid rgba(179, 67, 69, 0.3);
   border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 1rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 4px 15px rgba(179, 67, 69, 0.2);
 }
 
 .rag-response h4 {
   color: #fff;
   margin-bottom: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(179, 67, 69, 0.4);
 }
 
 .response-content {
@@ -355,7 +358,7 @@
   border: 1px solid rgba(179, 67, 69, 0.3);
   border-radius: 8px;
   padding: 1rem;
-  margin-top: 2.5rem;
+  margin-top: 1.5rem;
   padding-top: 0;
 }
 
