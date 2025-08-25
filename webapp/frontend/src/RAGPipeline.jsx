@@ -7,6 +7,7 @@ import twitterIcon from '../img/media_icons/twitter.svg';
 import redditIcon from '../img/media_icons/reddit.svg';
 import tiktokIcon from '../img/media_icons/tik-tok.svg';
 import yahooIcon from '../img/media_icons/yahoo.svg';
+import { apiFetch } from './api';
 
 function RAGPipeline() {
   const [response, setResponse] = useState('');
@@ -37,7 +38,7 @@ function RAGPipeline() {
 
     try {
       // Use fetch with streaming for real-time progress updates
-      const response = await fetch('http://localhost:5000/rag-query-progress', {
+      const response = await apiFetch('/rag-query-progress', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

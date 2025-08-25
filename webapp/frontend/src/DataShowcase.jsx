@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './DataShowcase.css';
+import { apiFetch } from './api';
 
 const DataShowcase = () => {
   const [data, setData] = useState([]);
@@ -21,7 +22,7 @@ const DataShowcase = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('http://localhost:5000/fighter-data');
+      const response = await apiFetch('/fighter-data');
       if (response.ok) {
         const jsonData = await response.json();
         setData(jsonData);

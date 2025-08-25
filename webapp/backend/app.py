@@ -53,7 +53,16 @@ def get_fighter_id(name, df):
 
 app = Flask(__name__)
 app.json_encoder = CustomJSONEncoder
-CORS(app, origins=['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174'], supports_credentials=True)
+
+# Configure CORS dynamically for deployment
+allowed_origins_env = os.getenv('ALLOWED_ORIGINS', '')
+if allowed_origins_env.strip():
+    allowed_origins = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
+else:
+    # Default to common localhost ports and allow all as a fallback in deployment
+    allowed_origins = ['*']
+
+CORS(app, origins=allowed_origins, supports_credentials=True)
 
 
 
@@ -723,4 +732,6 @@ def rag_query_progress():
         return jsonify({'error': 'Failed to process RAG query'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv('PORT', '8000'))
+    debug = os.getenv('FLASK_DEBUG', '0') == '1'
+    app.run(host='0.0.0.0', port=port, debug=debug)

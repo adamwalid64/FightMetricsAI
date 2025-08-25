@@ -6,6 +6,7 @@ import redfighter from '../img/redrobo.png'
 import redroboNews from '../img/redrobo-news.png'
 import headCog from '../img/head_cog_b34345_white_outline_clear.png'
 import FeatureImportanceChart from './FeatureImportanceChart';
+import { apiFetch } from './api';
 import AllModelsFeatureImportance from './AllModelsFeatureImportance';
 import DataShowcase from './DataShowcase';
 import FighterDatabase from './FighterDatabase';
@@ -32,7 +33,7 @@ function App() {
     const fetchFighters = async () => {
       try {
         console.log('Fetching fighter data from backend...');
-        const response = await fetch('http://localhost:5000/fighter-data', {
+        const response = await apiFetch('/fighter-data', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -207,7 +208,7 @@ function App() {
     
     try {
       setPredictionLoading(true);
-      const res = await fetch('http://localhost:5000/predict', {
+      const res = await apiFetch('/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

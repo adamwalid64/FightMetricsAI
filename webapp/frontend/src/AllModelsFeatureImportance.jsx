@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import './AllModelsFeatureImportance.css';
+import { apiFetch } from './api';
 import {
   Chart as ChartJS,
   BarElement,
@@ -29,7 +30,7 @@ function AllModelsFeatureImportance() {
     const fetchAllFeatureImportance = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/feature-importance/all');
+        const response = await apiFetch('/feature-importance/all');
         const data = await response.json();
         
         if (response.ok) {

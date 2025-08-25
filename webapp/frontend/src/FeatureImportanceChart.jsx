@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
+import { apiFetch } from './api';
 import {
   Chart as ChartJS,
   BarElement,
@@ -16,7 +17,7 @@ function FeatureImportanceChart() {
   const [chartData, setChartData] = useState({ labels: [], values: [] });
 
   useEffect(() => {
-    fetch('http://localhost:5000/feature-importance')
+    apiFetch('/feature-importance')
       .then((res) => res.json())
       .then((data) => {
         setChartData({ labels: data.features, values: data.scores });

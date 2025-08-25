@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './FighterDatabase.css';
+import { apiFetch } from './api';
 
 function FighterDatabase() {
   const [fighters, setFighters] = useState([]);
@@ -14,7 +15,7 @@ function FighterDatabase() {
     const fetchFighters = async () => {
       try {
         console.log('Fetching fighter database from backend...');
-        const response = await fetch('http://localhost:5000/fighter-data', {
+        const response = await apiFetch('/fighter-data', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

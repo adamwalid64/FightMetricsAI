@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: ufc-backend
+    env: python
+    rootDir: webapp/backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers=2 --threads=8 --timeout=180 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "true"
+      - key: ALLOWED_ORIGINS
+        value: "*"
+    autoDeploy: true
+
+  - type: static
+    name: ufc-frontend
+    rootDir: webapp/frontend
+    buildCommand: npm ci && npm run build
+    publishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        # Replace with the backend URL after the backend is created on Render
+        value: ""
+
