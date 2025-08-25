@@ -1,4 +1,4 @@
-## UFC Prediction Suite — Scraping, Machine Learning, RAG, and Web App
+## FightMetricsAI: UFC Prediction Suite — Scraping, Machine Learning, RAG, and Web App
 
 An end-to-end MMA analytics platform that scrapes real fighter data, trains multiple models, ensembles predictions, and augments them with a Retrieval-Augmented Generation (RAG) expert analysis pipeline — all shipped in a full-stack web app (Flask + React).
 
