@@ -330,7 +330,7 @@ function App() {
                   />
                   <span className="vs">vs</span>
                   <FighterDropdown
-                    fighters={fighters}
+                    fighters={fighters} 
                     value={fighterTwo}
                     onChange={setFighterTwo}
                     placeholder="Fighter Two"

@@ -54,15 +54,10 @@ def get_fighter_id(name, df):
 app = Flask(__name__)
 app.json_encoder = CustomJSONEncoder
 
-# Configure CORS dynamically for deployment
-allowed_origins_env = os.getenv('ALLOWED_ORIGINS', '')
-if allowed_origins_env.strip():
-    allowed_origins = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
-else:
-    # Default to common localhost ports and allow all as a fallback in deployment
-    allowed_origins = ['*']
+# Open up CORS to all origins to accommodate dev and Render deployment
+CORS(app, resources={r"/*": {"origins": "*"}})
 
-CORS(app, origins=allowed_origins, supports_credentials=True)
+
 
 
 
@@ -395,7 +390,7 @@ def feature_importance_mlp():
         # Load MLP model and metadata
         mlp_meta_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'torch_mlp_meta.json')
         mlp_model_path = os.path.join(os.path.dirname(__file__), '..', '..', 'Prediction', 'torch_mlp_model.pt')
-        
+
         if not all(os.path.exists(p) for p in [mlp_meta_path, mlp_model_path]):
             return jsonify({'error': 'MLP model files not found'}), 404
         
@@ -732,6 +727,4 @@ def rag_query_progress():
         return jsonify({'error': 'Failed to process RAG query'}), 500
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', '8000'))
-    debug = os.getenv('FLASK_DEBUG', '0') == '1'
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    app.run(debug=True)
