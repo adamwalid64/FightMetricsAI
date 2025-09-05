@@ -2,7 +2,7 @@ import { useState } from 'react';
 import './RAGPipeline.css';
 import redroboNews from '../img/redrobo-news.png';
 import blueroboNews from '../img/bluerobo-news.png';
-import scrapeGif from '../img/scrape_gif.webm';
+import ragIcon from '../img/Rag_icon.png';
 import twitterIcon from '../img/media_icons/twitter.svg';
 import redditIcon from '../img/media_icons/reddit.svg';
 import tiktokIcon from '../img/media_icons/tik-tok.svg';
@@ -104,16 +104,14 @@ function RAGPipeline() {
   return (
          <div className="rag-pipeline">
        <div className="title-section">
-         <div className="icon-container">
-           <video 
-             src={scrapeGif} 
-             autoPlay 
-             loop 
-             muted 
-             id="rag-prediction-icon"
-             title="Data Scraping Process Demo"
-           />
-         </div>
+                 <div className="icon-container">
+          <img 
+            src={ragIcon} 
+            alt="RAG Analysis Icon" 
+            id="rag-prediction-icon"
+            title="RAG Analysis"
+          />
+        </div>
          <h3>RAG Fight Analysis</h3>
        </div>
       <p className="tool-description">
